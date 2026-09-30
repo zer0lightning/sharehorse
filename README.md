@@ -1,11 +1,10 @@
 # Sharehorse - SharePoint Fingerprint Tool
-![Epic Banner](./assets/banner.jpg)
 
-A single-file, browser-console tool that passively fingerprints a SharePoint site - on-premises or online. It identifies the product edition, build number, and Cumulative/Public Update (CU/PU) from a database of 285 official Microsoft builds, and gathers a wider fingerprint on top of that: site collection compatibility mode, sovereign cloud instance, topology, regional settings, and infrastructure headers.
+![Sharehorse banner](./assets/banner.jpg)
 
-[Authorized Use Only](#disclaimer)
+A single-file, browser-console tool that passively fingerprints a SharePoint site - on-premises or online. It identifies the product edition, build number, and Cumulative/Public Update (CU/PU) from a local database of the official Microsoft build history, and gathers a wider fingerprint on top of that: site collection compatibility mode, sovereign cloud instance, topology, regional settings, and infrastructure headers.
 
-This tool is for education purposes only. 
+**For authorized use only.** Intended for security assessment, asset inventory, and education, on systems you own or are permitted to test. See the [Disclaimer](#disclaimer).
 
 ---
 
@@ -54,7 +53,7 @@ SharePoint doesn't expose its version number in a single reliable place. Dependi
 1. Collects every version-related signal it can reach in the current session, with an 8-second timeout per request.
 2. Cross-validates those signals against each other, working around the known header bug.
 3. Resolves REST API calls against the actual site collection you're on, not the domain root (see [Site-relative REST API resolution](#site-relative-rest-api-resolution)).
-4. Matches the resolved build number against a database of **285 official Microsoft build entries** covering SharePoint 2013, 2016, 2019, and Subscription Edition.
+4. Matches the resolved build number against a local database of the **full official Microsoft build history** covering SharePoint 2013, 2016, 2019, and Subscription Edition.
 5. Reports the product, exact CU/PU name, KB number, release date, and an explicit confidence level - including the documented ambiguity between SharePoint 2019 and Subscription Edition at their shared RTM build.
 6. Flags non-fatal issues (timeouts, auth redirects, 401/403s) as explicit **Diagnostics** rather than failing silently.
 7. Saves a `.txt` and a `.json` report automatically, and can scan multiple site collections in one run (**batch mode**), producing a combined CSV.
@@ -69,13 +68,13 @@ It performs no vulnerability scanning, exploitation, or write operations. See [P
 
 ## Research
 
-Sharehorse is a passive SharePoint fingerprinter with an official-build database (285 entries: 2013, 2016, 2019, Subscription Edition), two documented product quirks (the `MicrosoftSharePointTeamServices` header bug and the 2019/SE shared-RTM-build collision), and defensive material.
+Sharehorse is a passive SharePoint fingerprinter with an official-build database covering 2013, 2016, 2019, and Subscription Edition, two documented product quirks (the `MicrosoftSharePointTeamServices` header bug and the 2019/SE shared-RTM-build collision), and defensive material.
 
 **The problem.** SharePoint exposes its version in no single reliable place, and the header people reach for first - `MicrosoftSharePointTeamServices` - is metabase-cached, varies across load-balanced nodes, and on 2019+/SE is malformed (reports build `0`, misclassifying the farm as 2016). Trusting it gives confidently wrong answers.
 
 **Why it matters.** On-premises SharePoint is a high-value target repeatedly hit by critical, actively exploited RCEs, where exposure often comes down to a single CU. The exact build - and thus the patch level - is the line between "patched" and "exploitable." That serves assessors (confirming real patch state) and defenders (patch-compliance inventory, spotting compat-mode drift) alike.
 
-**Why it includes defense.** Fingerprinting is dual-use, so the project pairs the tool with [hardening](./HARDENING.md), [detection](./DETECTION.md) and [migration](./MIGRATE.md)- useful to the blue team, not only the scanner.
+**Why it includes defense.** Fingerprinting is dual-use, so the project pairs the tool with [hardening](./HARDENING.md), [detection](./DETECTION.md), and [migration](./MIGRATE.md) - useful to the blue team, not only the scanner.
 
 Read-only, for systems you own or are authorized to assess. See the [Disclaimer](#disclaimer).
 
@@ -90,11 +89,11 @@ If an automatic download is blocked by a browser extension or CSP policy, use th
 
 ## Samples
 
-Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.MD) for the full walkthrough.
+Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.md) for the full walkthrough.
 
-1. **Console output** - banner, collapsible signal groups, the 🧬 Extended Fingerprint group, the header-quirk note, the build-database match, and the summary card: [`/reports/sharehorse-console.png`](./reports/sharehorse-console.png).
+1. **Console output** - banner, collapsible signal groups, the 🧬 Extended Fingerprint group, the header-quirk note, the build-database match, and the summary card: [`reports/sharehorse-console.png`](./reports/sharehorse-console.png).
 2. **`.txt` report** - human-readable, saved to your downloads folder (or `copy(__spDetectorReport())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.txt`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.txt).
-3. **`.json` report** - machine-readable, with a dedicated `extendedFingerprint` object for inventory/audit pipelines (or `copy(__spDetectorReportJSON())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.json`](.reports/sharepoint-detection_sharepoint.local_2026-09-30.json).
+3. **`.json` report** - machine-readable, with a dedicated `extendedFingerprint` object for inventory/audit pipelines (or `copy(__spDetectorReportJSON())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.json`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.json).
 
 ## Console helpers
 
@@ -142,7 +141,7 @@ The script gathers signals from four independent sources, in priority order:
 | 3 | `vti_extenderversion` | `GET /_vti_pvt/service.cnf` | High - same format, used as one more fallback rung |
 | 4 | `MicrosoftSharePointTeamServices` | HTTP response header (any request) | **Unreliable on 2019+/SE** - see below |
 
-Sources 1–3 are always preferred for classification and lookup. The HTTP header is only used as a last resort, and only after being checked for the known formatting bug described next.
+Sources 1-3 are always preferred for classification and lookup. The HTTP header is only used as a last resort, and only after being checked for the known formatting bug described next.
 
 Each successfully-read signal is logged as an entry in **Detection Evidence**, including the full resolved URL that was queried, so you can independently verify every claim the script makes.
 
@@ -193,7 +192,7 @@ Anything caught this way shows up in a collapsible **🩺 Diagnostics** console 
 
 ### 1. Site collection compatibility mode
 
-A SharePoint site collection can run in an **older UI/behavior compatibility level** than the farm's actual binaries - most commonly a site left in SharePoint 2013 mode (`UIVersion 15`) after an upgrade to a newer farm (2016/2019/Subscription Edition, major version 16). Administrators don't always run `Set-SPSite -CompatibilityLevel` on every site collection after a farm upgrade, so this drift is common and is invisible to any tool that only checks the farm's patch level.
+A SharePoint site collection can run in an **older UI/behavior compatibility level** than the farm's actual binaries - most commonly a site left in SharePoint 2013 mode (`UIVersion 15`) after an upgrade to a newer farm (2016/2019/Subscription Edition, major version 16). A site collection's compatibility level is not always upgraded after a farm upgrade, so this drift is common and is invisible to any tool that only checks the farm's patch level.
 
 Sharehorse fetches `/_api/web?$select=Title,WebTemplate,Configuration,UIVersion,UIVersionConfigurationEnabled,Language,LanguageName` and compares the returned `UIVersion` against the major version of the detected farm build. A mismatch produces an explicit warning:
 
@@ -258,15 +257,14 @@ Beyond the build number, the script extracts `SupportedSchemaVersions`, `SiteFul
 
 The script embeds the official SharePoint update history for four product lines, transcribed from Microsoft's release-notes page:
 
-| Product | Entries | Range |
-|---|---|---|
-| SharePoint Server 2013 | 17 | RTM (2012-10-16) → final CU (April 2023, end of support) |
-| SharePoint Server 2016 | 118 | RTM (2016-05-04) → final CU (June 2026, end of support 2026-07-14) |
-| SharePoint Server 2019 | 92 | RTM (2018-10-22) → final CU (June 2026, end of support 2026-07-14) |
-| SharePoint Server Subscription Edition | 58 | RTM (2021-11-02) → latest known CU (July 2026) |
-| **Total** | **285** | |
+| Product | Coverage |
+|---|---|
+| SharePoint Server 2013 | RTM (2012-10-16) → end of support April 2023 |
+| SharePoint Server 2016 | RTM (2016-05-04) → end of support 2026-07-14 |
+| SharePoint Server 2019 | RTM (2018-10-22) → end of support 2026-07-14 |
+| SharePoint Server Subscription Edition | RTM (2021-11-02) → current (updated monthly) |
 
-Every entry includes the build number, a human-readable label (including SE's feature-update milestones - `23H1`, `24H1`, `24H2`, `25H1`, `25H2`, etc.), the release date, and the associated Microsoft KB number where applicable. The data lives in the `BUILD_DATABASE` object inside `sharehorse.js`, keyed by product name, each an array of `{ build, label, date, kb }` entries in ascending build order.
+Every entry includes the build number, a human-readable label (including SE's feature-update milestones - `23H1`, `24H1`, `24H2`, `25H1`, `25H2`, etc.), the release date, and the associated Microsoft KB number where applicable. The data lives in the `BUILD_DATABASE` object inside `sharehorse.js`, keyed by product name, each an array of `{ build, label, date, kb }` entries in ascending build order. The database is regenerated by the daily updater, so the exact entry count grows over time.
 
 **Source of truth:** [learn.microsoft.com/officeupdates/sharepoint-updates](https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates)
 
@@ -276,7 +274,7 @@ If a detected build isn't in the table (e.g. a CU released after the last update
 
 ## Automated signature updates
 
-`BUILD_DATABASE` is kept current automatically by a scheduled GitHub Action, so new CUs appear in the database without manual transcription.
+`BUILD_DATABASE` is kept current automatically by a scheduled GitHub Action, so new CUs appear without manual transcription.
 
 **Updater - `scripts/update-signatures.js`** (Node, no third-party dependencies; uses the built-in `fetch`, Node ≥ 18):
 
@@ -284,7 +282,7 @@ If a detected build isn't in the table (e.g. a CU released after the last update
 - Parses the four living-product tables (Subscription Edition, 2019, 2016, 2013) into `{ build, kb, date }` rows, taking the first build in the Version cell and the first (STS / language-independent) KB in the KB cell.
 - **Merges, never regenerates.** Only build numbers not already in `BUILD_DATABASE` are appended, to the end of the matching product array, in the existing `{ build, label, date, kb }` shape. Existing hand-curated entries - RTM notes, feature-update milestones, end-of-support labels - are left byte-for-byte untouched.
 - New entries get a derived label of `"<Month> <Year> CU"` and a date of `YYYY-MM-DD` (or `YYYY-MM` when Microsoft's table gives only a month).
-- **Self-protecting:** it runs `node --check` on the result and refuses to write if the file wouldn't parse, and it aborts if a product section yields zero rows (a signal the page layout changed) rather than blanking the table. If nothing new is found, the file is left byte-identical, so no commit is produced.
+- **Self-protecting:** it runs `node --check` on the result and refuses to write if the file wouldn't parse, and aborts if a product section yields zero rows (a signal the page layout changed) rather than blanking the table. If nothing new is found, the file is byte-identical, so no commit is produced.
 
 **Workflow - `.github/workflows/update-sharepoint-sigs.yml`:**
 
@@ -292,7 +290,7 @@ If a detected build isn't in the table (e.g. a CU released after the last update
 - Checks out the repo, sets up Node, runs `node scripts/update-signatures.js`, then commits and pushes **only if `sharehorse.js` actually changed** - so quiet days produce no empty commits.
 - Declares `permissions: contents: write`; the repository's **Settings → Actions → General → Workflow permissions** must also be set to **Read and write permissions** for the push to succeed. Commits land on the default branch (`main`).
 
-The updater and the workflow only touch `BUILD_DATABASE`; all other code in `sharehorse.js` is untouched. The [manual process](#maintaining-the-build-database) below remains valid as a fallback or for curating labels the updater can't infer (e.g. feature-update milestones or end-of-support annotations).
+The updater and the workflow only touch `BUILD_DATABASE`; all other code in `sharehorse.js` is untouched. The [manual process](#maintaining-the-build-database) below remains valid as a fallback or for curating labels the updater can't infer.
 
 ## Confidence scoring
 
@@ -375,7 +373,7 @@ Two limits bound what hardening can do: the build is returned by `POST /_api/con
 - **`MicrosoftSharePointTeamServices`:** no official removal - blank it via an IIS URL Rewrite outbound rule, or disable Client Integration (extreme; breaks Office integration).
 - **Not mitigable:** REST metadata, hostname-based cloud inference. Do not disable CSP to hide the 24H1+ hint.
 
-Full methods, config snippets, and Microsoft references: [Hardening](./HARDENING.md).
+Full methods, config snippets, and Microsoft references: [HARDENING.md](./HARDENING.md).
 
 ## Detection
 
@@ -386,7 +384,7 @@ Because Sharehorse runs in the browser on the logged-in user's session, it blend
 - **Edge blocking:** deny `.../_vti_pvt/service.cnf` at a reverse proxy/WAF (do not blanket-block `/_vti_bin/`).
 - **Not detectable:** client-side report downloads, hostname-based cloud inference, or a single stray request.
 
-Full correlation logic, KQL (Sentinel) and SPL (Splunk) queries, tuning, and references: [Detection (on-premises)](./DETECTION.md).
+Full correlation logic, KQL (Sentinel) and SPL (Splunk) queries, tuning, and references: [DETECTION.md](./DETECTION.md).
 
 ## Migration
 
@@ -416,7 +414,8 @@ This tool is intended for legitimate IT asset inventory, patch-compliance auditi
 
 ## License
 
-![MIT License](./LICENSE)
+Released under the MIT License. See [LICENSE](./LICENSE).
 
 ## References
-![Thank you to all. Credits and references.](./REFERENCES.md)
+
+Sources and credits: [REFERENCES.md](./REFERENCES.md).
