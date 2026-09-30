@@ -24,7 +24,7 @@ What prints in the DevTools console after pasting `sharehorse.js`: banner, colla
 
 ## `.txt` report
 
-Saved automatically to your downloads folder, and also available via `copy(__spDetectorReport())`. Excerpt below; full file: [`docs/sample-report.txt`](./docs/sample-report.txt).
+Saved automatically to your downloads folder, and also available via `copy(__spDetectorReport())`. Excerpt below; full file: [`./sharepoint-detection_sharepoint.local_2026-09-30.txt`](./sharepoint-detection_sharepoint.local_2026-09-30.txt).
 
 ```text
 -- Detection Evidence --
@@ -53,7 +53,7 @@ Saved automatically to your downloads folder, and also available via `copy(__spD
 
 ## `.json` report
 
-Machine-readable sibling for inventory/audit pipelines, also available via `copy(__spDetectorReportJSON())`. It carries a dedicated `extendedFingerprint` object alongside the flat `rawSignals`. Top-level fields shown below; full file: [`docs/sample-report.json`](./docs/sample-report.json).
+Machine-readable sibling for inventory/audit pipelines, also available via `copy(__spDetectorReportJSON())`. It carries a dedicated `extendedFingerprint` object alongside the flat `rawSignals`. Top-level fields shown below; full file: [`/sharepoint-detection_sharepoint.local_2026-09-30.json`](./sharepoint-detection_sharepoint.local_2026-09-30.json.
 
 ```json
 {
@@ -73,8 +73,8 @@ Machine-readable sibling for inventory/audit pipelines, also available via `copy
   "siteBaseUrl": "https://sharepoint.local/sites/Finance",
   "usedPageContextInfo": true,
   "extendedFingerprint": { "truncated": "see docs/sample-report.json" },
-  "rawSignals": { "truncated": "see docs/sample-report.json" },
-  "evidence": [ { "truncated": "see docs/sample-report.json" } ],
+  "rawSignals": { "truncated": "see /sharepoint-detection_sharepoint.local_2026-09-30.json" },
+  "evidence": [ { "truncated": "see /sharepoint-detection_sharepoint.local_2026-09-30.json" } ],
   "diagnostics": []
 }
 ```
@@ -83,9 +83,9 @@ Machine-readable sibling for inventory/audit pipelines, also available via `copy
 
 | File | What it is |
 |---|---|
-| `docs/sharehorse-console.png` | The console screenshot shown above |
-| `docs/sample-report.txt` | Full `.txt` report for this run (exact tool output) |
-| `docs/sample-report.json` | Full `.json` report for this run (exact tool output) |
+| `/sharehorse-console.png` | The console screenshot shown above |
+| `/sharepoint-detection_sharepoint.local_2026-09-30.json` | Full `.txt` report for this run (exact tool output) |
+| `/sharepoint-detection_sharepoint.local_2026-09-30.txt` | Full `.json` report for this run (exact tool output) |
 
 Notes:
 
