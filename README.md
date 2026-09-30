@@ -388,7 +388,7 @@ Two limits bound what hardening can do: the build is returned by `POST /_api/con
 - **Require authentication:** removing anonymous access makes unauthenticated requests to `/_api/*` and `/_vti_pvt/service.cnf` fail.
 - **Remove banner headers (documented):** `X-Powered-By`, `X-AspNet-Version` (`enableVersionHeader="false"`), and `Server` (`DisableServerHeader` / `removeServerHeader`).
 - **`MicrosoftSharePointTeamServices`:** no official removal - blank it via an IIS URL Rewrite outbound rule, or disable Client Integration (extreme; breaks Office integration).
-- **Not mitigable:** REST metadata, hostname-based cloud inference. Do not disable CSP to hide the 24H1+ hint.
+- **No mitigation** REST metadata, hostname-based cloud inference. Do not disable CSP to hide the 24H1+ hint.
 
 Full methods, config snippets, and Microsoft references: [HARDENING.md](./HARDENING.md).
 
