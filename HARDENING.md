@@ -73,6 +73,16 @@ This header is already unreliable (metabase-cached; malformed on 2019+/SE - see 
 
 Require authentication to stop anonymous recon; remove the documented ASP.NET/IIS banners. The build is returned by the REST API by design and cannot be hidden from an authenticated user. Patching is the only control that changes the outcome.
 
+## Disclaimer
+
+The hardening, mitigation, and detection guidance here is provided for informational purposes to help defenders protect systems they own or are authorized to administer.
+
+- **Test before production.** Changes to IIS, Http.sys, ASP.NET, reverse-proxy, or SharePoint configuration can break functionality - Office client integration, search crawl, WebDAV, authentication, and third-party tools. Validate every change in a non-production environment first and have a rollback plan.
+- **Verify against current vendor documentation.** Endpoints, headers, agents, and settings change between product versions and over time. Confirm each step against the referenced Microsoft (or vendor) documentation for your exact version before applying it.
+- **Detection is not prevention.** The example queries are starting points to tune to your own traffic; they will produce false positives and false negatives until validated against real logs in your environment.
+- **No warranty, no liability.** This material is provided "as is," without warranty of any kind. The authors and contributors accept no liability for any damage, outage, or other consequence arising from its use or misuse.
+- **Not affiliated with Microsoft.** "SharePoint," "IIS," "Azure," and related names are trademarks of Microsoft Corporation. This is an independent project and is not endorsed by or affiliated with Microsoft.
+
 ## References
 
 1. Remove unwanted HTTP response headers - Microsoft (archive). <https://learn.microsoft.com/en-us/archive/blogs/varunm/remove-unwanted-http-response-headers>
