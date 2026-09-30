@@ -3,9 +3,9 @@
 
 A single-file, browser-console tool that passively fingerprints a SharePoint site - on-premises or online. It identifies the product edition, build number, and Cumulative/Public Update (CU/PU) from a database of 285 official Microsoft builds, and gathers a wider fingerprint on top of that: site collection compatibility mode, sovereign cloud instance, topology, regional settings, and infrastructure headers.
 
-[Authorize Use Only](#disclaimer)
+[Authorized Use Only](#disclaimer)
 
-Paste it into Chrome DevTools on any SharePoint page. No installation, no dependencies, no server-side access required.
+This tool is for education purposes only. 
 
 ---
 
