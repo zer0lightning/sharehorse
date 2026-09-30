@@ -48,7 +48,7 @@ A single-file, browser-console tool that passively fingerprints a SharePoint sit
 
 ## What it does
 
-SharePoint doesn't expose its version number in a single reliable place. Depending on farm configuration, the real build number may only be visible through one of several signals - and one commonly used signal (an HTTP response header) has a known, unfixed formatting bug since SharePoint 2019. This script:
+SharePoint doesn't expose its version number in a single reliable place. Depending on farm configuration, the real build number may only be visible through one of several signals - and one commonly used signal (an HTTP response header) has a known, unfixed formatting bug since SharePoint 2019. Sharehorse.js:
 
 1. Collects every version-related signal it can reach in the current session, with an 8-second timeout per request.
 2. Cross-validates those signals against each other, working around the known header bug.
