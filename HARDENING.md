@@ -62,14 +62,14 @@ No Microsoft-documented removal. Two options, both caveated:
 
 This header is already unreliable (metabase-cached; malformed on 2019+/SE - see the header-bug section). [8]
 
-## 4. Not mitigable
+## 4. No Mitigation
 
 - **REST metadata** - `/_api/contextinfo`, `/_api/web`, `/_api/site`, `/_api/web/regionalsettings`. Core endpoints; authentication is the only lever, and any authenticated read returns them.
 - **Cloud instance** - inferred from the hostname; no request made.
 - **Content-Security-Policy presence** - do not disable CSP to hide the 24H1+ hint; the leak is negligible against the protection lost.
 - **UIVersion compatibility drift** - remediate with `Set-SPSite -CompatibilityLevel`, do not hide.
 
-## Bottom line
+## Conclusion
 
 Require authentication to stop anonymous recon; remove the documented ASP.NET/IIS banners. The build is returned by the REST API by design and cannot be hidden from an authenticated user. Patching is the only control that changes the outcome.
 
