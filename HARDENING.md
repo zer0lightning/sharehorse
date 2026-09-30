@@ -1,6 +1,6 @@
 # Hardening
 
-Two facts set the ceiling on what hardening achieves:
+Hardening against version fingerprinting.
 
 - **The build cannot be hidden from an authenticated user.** `POST /_api/contextinfo` returns `LibraryVersion` by design and is core to SharePoint; it cannot be blocked without breaking the product.
 - **There is no official Microsoft method to remove the `MicrosoftSharePointTeamServices` header.** IIS/proxy rules blank the value, they do not remove the header. [1]
