@@ -20,7 +20,7 @@ The values (`sharepoint.local`, GUIDs, proxy name) are illustrative; the build-t
 
 What prints in the DevTools console after pasting `sharehorse.js`: banner, collapsible signal groups, the extended fingerprint (with the compatibility-mode warning), the header-quirk note, the build-database match, and the summary card.
 
-![Sharehorse console output](./docs/sharehorse-console.png)
+![Sharehorse console output](./sharehorse-console.png)
 
 ## `.txt` report
 
@@ -73,8 +73,8 @@ Machine-readable sibling for inventory/audit pipelines, also available via `copy
   "siteBaseUrl": "https://sharepoint.local/sites/Finance",
   "usedPageContextInfo": true,
   "extendedFingerprint": { "truncated": "see docs/sample-report.json" },
-  "rawSignals": { "truncated": "see /sharepoint-detection_sharepoint.local_2026-09-30.json" },
-  "evidence": [ { "truncated": "see /sharepoint-detection_sharepoint.local_2026-09-30.json" } ],
+  "rawSignals": { "truncated": "see ./sharepoint-detection_sharepoint.local_2026-09-30.json" },
+  "evidence": [ { "truncated": "see ./sharepoint-detection_sharepoint.local_2026-09-30.json" } ],
   "diagnostics": []
 }
 ```
