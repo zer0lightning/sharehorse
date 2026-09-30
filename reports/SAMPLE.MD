@@ -90,4 +90,4 @@ Machine-readable sibling for inventory/audit pipelines, also available via `copy
 Notes:
 
 - In a clean run like this one, the Diagnostics group does not appear. It only renders when there is a timeout, auth redirect, or 401/403 to report.
-- The excerpts above are lightly simplified for readability. The two files in `docs/` are the tool's exact output (including the em dashes it emits in headings and match lines).
+- The excerpts above are lightly simplified for readability. The two files in `/` are the tool's exact output (including the em dashes it emits in headings and match lines).
