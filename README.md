@@ -2,7 +2,7 @@
 
 ![Sharehorse banner](./assets/banner.jpg)
 
-A single-file, browser-console tool that passively fingerprints a SharePoint site - on-premises or online. It identifies the product edition, build number, and Cumulative/Public Update (CU/PU) from a local database of the official Microsoft build history, and gathers a wider fingerprint on top of that: site collection compatibility mode, sovereign cloud instance, topology, regional settings, and infrastructure headers.
+A single-file, browser-console tool that passively fingerprints a SharePoint site - on-premises or online. It identifies the product edition, build number, and Cumulative/Public Update (CU/PU) from a local database of the official Microsoft build history, then gathers a wider fingerprint: site collection compatibility mode, sovereign cloud instance, topology, regional settings, and infrastructure headers.
 
 **For authorized use only.** Intended for security assessment, asset inventory, and education, on systems you own or are permitted to test. See the [Disclaimer](#disclaimer).
 
