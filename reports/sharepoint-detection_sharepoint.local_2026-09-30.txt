@@ -1,0 +1,78 @@
+======================================================================
+Sharehorse — SharePoint Fingerprint Tool (Advanced) — Report
+Generated: 2026-09-30T21:40:12.885Z
+Target:    https://sharepoint.local/sites/Finance/SitePages/Home.aspx
+======================================================================
+
+-- Raw Signals Collected --
+  Hostname                     : sharepoint.local
+  Environment                  : On-Premises / SharePoint Server
+  MicrosoftSharePointTeamServices : 16.0.0.19725
+  X-AspNet-Version             : 4.0.30319
+  X-Powered-By                 : ASP.NET
+  Server                       : Microsoft-IIS/10.0
+  SPRequestGuid                : 9f2c1a44-7b6e-90a2-3c15-0e7d4a2b8f01
+  X-SharePointHealthScore      : 0
+  vti_extenderversion          : 16.0.19725.20434
+  vti_buildversion             : 16.0.19725.20434
+  REST LibraryVersion          : 16.0.19725.20434
+  REST FormDigestTimeoutSeconds : 1800
+  Site Base URL (used for REST API) : https://sharepoint.local/sites/Finance
+  Resolved via _spPageContextInfo : Yes (reliable)
+
+-- Extended Fingerprint (Sharehorse) --
+  Cloud Instance               : (on-premises / not a *.sharepoint.* hostname)
+  Negotiated HTTP Protocol     : h2
+  Web Title                    : Finance
+  WebTemplate                  : STS
+  Configuration                : 0
+  UIVersion (site compatibility level) : 15
+  UIVersionConfigurationEnabled : false
+  Language (LCID)              : 1033
+  LanguageName                 : English
+  Site Id                      : 3a1b9c7d-2e4f-4a80-9b12-6c5d8e0f1a23
+  Hub Site Id                  : (not hub-associated)
+  Microsoft 365 Group Id       : (not group-connected / not present)
+  Site Read-Only               : false
+  Regional LocaleId            : 1033
+  Regional TimeZone            : (UTC-08:00) Pacific Time (US and Canada)
+  Installed Language Packs     : English (1033), French (France) (1036)
+  SupportedSchemaVersions      : 14.0.0.0, 15.0.0.0, 16.0.0.0
+  SiteFullUrl                  : https://sharepoint.local/sites/Finance
+  WebFullUrl                   : https://sharepoint.local/sites/Finance
+  Content-Security-Policy      : (not present)
+  Reverse-proxy / WAF / CDN headers : Via=1.1 sharepoint-rp
+  ⚠ Compatibility mode: This site collection is running in UIVersion 15 compatibility mode (behaves like SharePoint 2013), even though the farm itself is on build major 16 (SharePoint 2016/2019/Subscription Edition). Run Set-SPSite -CompatibilityLevel to upgrade this specific site collection if desired.
+
+-- Detection Evidence --
+  - REST LibraryVersion (weight 5)
+      URL: https://sharepoint.local/sites/Finance/_api/contextinfo
+  - vti_buildversion (weight 5)
+      URL: https://sharepoint.local/_vti_pvt/service.cnf
+  - vti_extenderversion (weight 3)
+      URL: https://sharepoint.local/_vti_pvt/service.cnf
+  - MicrosoftSharePointTeamServices (deprioritized — known 16.0.0.XXXXX bug) (weight 1)
+      URL: (HTTP response header)
+
+-- Header Quirk Detected --
+  MicrosoftSharePointTeamServices reported "16.0.0.19725" — matches
+  Microsoft's known "16.0.0.XXXXX" header bug on SharePoint 2019+/Subscription Edition.
+  Header trailing segment 19725 matches the build segment of vti_buildversion (16.0.19725.20434) — consistent, not a discrepancy.
+  Resolved using vti_buildversion / REST LibraryVersion instead.
+
+-- Build Database Match --
+  Exact match — 16.0.19725.20434 = July 2026 CU (2026-07-14, KB5002882)
+
+-- Summary --
+  Product                      : SharePoint Server Subscription Edition
+  Build                        : 16.0.19725.20434
+  CU / PU                      : July 2026 CU
+  KB Number                    : KB5002882
+  Released                     : 2026-07-14
+  Environment                  : On-Premises / SharePoint Server
+  Confidence                   : High
+  Detection Method             : exact match in build database (July 2026 CU)
+
+======================================================================
+Source of truth for build/CU mappings: https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates
+======================================================================

@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-09-30T21:40:12.885Z",
+  "targetUrl": "https://sharepoint.local/sites/Finance/SitePages/Home.aspx",
+  "hostname": "sharepoint.local",
+  "environment": "On-Premises / SharePoint Server",
+  "isOnline": false,
+  "product": "SharePoint Server Subscription Edition",
+  "productAmbiguous": false,
+  "ambiguousCandidates": null,
+  "detectedBuild": "16.0.19725.20434",
+  "cu": "July 2026 CU",
+  "cuExactMatch": true,
+  "closestKnownBuild": null,
+  "kb": "5002882",
+  "releaseDate": "2026-07-14",
+  "confidence": "High",
+  "detectionMethod": "exact match in build database (July 2026 CU)",
+  "headerBugDetected": true,
+  "headerCrossCheckNote": "Header trailing segment 19725 matches the build segment of vti_buildversion (16.0.19725.20434) — consistent, not a discrepancy.",
+  "siteBaseUrl": "https://sharepoint.local/sites/Finance",
+  "usedPageContextInfo": true,
+  "compatibilityModeNote": "This site collection is running in UIVersion 15 compatibility mode (behaves like SharePoint 2013), even though the farm itself is on build major 16 (SharePoint 2016/2019/Subscription Edition). Run Set-SPSite -CompatibilityLevel to upgrade this specific site collection if desired.",
+  "extendedFingerprint": {
+    "cloudEnvironment": null,
+    "negotiatedProtocol": "h2",
+    "webTitle": "Finance",
+    "webTemplate": "STS",
+    "webConfiguration": 0,
+    "siteUIVersion": 15,
+    "uiVersionConfigurationEnabled": false,
+    "webLanguageLcid": 1033,
+    "webLanguageName": "English",
+    "siteId": "3a1b9c7d-2e4f-4a80-9b12-6c5d8e0f1a23",
+    "hubSiteId": null,
+    "groupId": null,
+    "siteReadOnly": false,
+    "regionalLocaleId": 1033,
+    "regionalTimeZone": "(UTC-08:00) Pacific Time (US and Canada)",
+    "installedLanguages": [
+      {
+        "displayName": "English",
+        "lcid": 1033,
+        "languageTag": "en-US"
+      },
+      {
+        "displayName": "French (France)",
+        "lcid": 1036,
+        "languageTag": "fr-FR"
+      }
+    ],
+    "supportedSchemaVersions": "14.0.0.0, 15.0.0.0, 16.0.0.0",
+    "siteFullUrl": "https://sharepoint.local/sites/Finance",
+    "webFullUrl": "https://sharepoint.local/sites/Finance",
+    "contentSecurityPolicy": null,
+    "proxyHeaders": {
+      "Via": "1.1 sharepoint-rp"
+    }
+  },
+  "rawSignals": {
+    "Hostname": "sharepoint.local",
+    "Environment": "On-Premises / SharePoint Server",
+    "MicrosoftSharePointTeamServices": "16.0.0.19725",
+    "XAspNetVersion": "4.0.30319",
+    "XPoweredBy": "ASP.NET",
+    "Server": "Microsoft-IIS/10.0",
+    "SPRequestGuid": "9f2c1a44-7b6e-90a2-3c15-0e7d4a2b8f01",
+    "XSharePointHealthScore": "0",
+    "vti_extenderversion": "16.0.19725.20434",
+    "vti_buildversion": "16.0.19725.20434",
+    "REST_LibraryVersion": "16.0.19725.20434",
+    "REST_FormDigestTimeoutSeconds": 1800,
+    "CloudEnvironment": null,
+    "NegotiatedProtocol": "h2",
+    "Web_Title": "Finance",
+    "Web_WebTemplate": "STS",
+    "Web_Configuration": 0,
+    "Web_UIVersion": 15,
+    "Web_UIVersionConfigurationEnabled": false,
+    "Web_Language": 1033,
+    "Web_LanguageName": "English",
+    "Site_Id": "3a1b9c7d-2e4f-4a80-9b12-6c5d8e0f1a23",
+    "Site_HubSiteId": null,
+    "Site_GroupId": null,
+    "Site_ReadOnly": false,
+    "RegionalSettings_LocaleId": 1033,
+    "RegionalSettings_TimeZone": "(UTC-08:00) Pacific Time (US and Canada)",
+    "InstalledLanguages": [
+      {
+        "displayName": "English",
+        "lcid": 1033,
+        "languageTag": "en-US"
+      },
+      {
+        "displayName": "French (France)",
+        "lcid": 1036,
+        "languageTag": "fr-FR"
+      }
+    ],
+    "REST_SupportedSchemaVersions": "14.0.0.0, 15.0.0.0, 16.0.0.0",
+    "REST_SiteFullUrl": "https://sharepoint.local/sites/Finance",
+    "REST_WebFullUrl": "https://sharepoint.local/sites/Finance",
+    "ContentSecurityPolicy": null,
+    "ProxyHeaders": {
+      "Via": "1.1 sharepoint-rp"
+    }
+  },
+  "evidence": [
+    {
+      "source": "REST LibraryVersion",
+      "weight": 5,
+      "url": "https://sharepoint.local/sites/Finance/_api/contextinfo"
+    },
+    {
+      "source": "vti_buildversion",
+      "weight": 5,
+      "url": "https://sharepoint.local/_vti_pvt/service.cnf"
+    },
+    {
+      "source": "vti_extenderversion",
+      "weight": 3,
+      "url": "https://sharepoint.local/_vti_pvt/service.cnf"
+    },
+    {
+      "source": "MicrosoftSharePointTeamServices (deprioritized — known 16.0.0.XXXXX bug)",
+      "weight": 1,
+      "url": "(HTTP response header)"
+    }
+  ],
+  "diagnostics": [],
+  "sourceOfTruth": "https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates"
+}
