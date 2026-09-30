@@ -1,4 +1,5 @@
 # Sharehorse - SharePoint Fingerprint Tool
+![Epic Banner](./assets/banner.jpg)
 
 A single-file, browser-console tool that passively fingerprints a SharePoint site - on-premises or online. It identifies the product edition, build number, and Cumulative/Public Update (CU/PU) from a database of 285 official Microsoft builds, and gathers a wider fingerprint on top of that: site collection compatibility mode, sovereign cloud instance, topology, regional settings, and infrastructure headers.
 
