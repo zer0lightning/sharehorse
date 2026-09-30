@@ -33,8 +33,7 @@
  * subsite/feature/solution enumeration, executing search queries, and
  * probing what the current user specifically has permission to do.
  *
- * This is the advanced sibling of Sharepony.js — same core detection engine,
- * with a handful of additional read-only GET requests per target (_api/web,
+ * Read-only GET requests per target (_api/web,
  * _api/web/regionalsettings, _api/site) to pull the signals above.
  *
  * USAGE (single page):
