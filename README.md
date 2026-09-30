@@ -350,4 +350,4 @@ This tool is intended for legitimate IT asset inventory, patch-compliance auditi
 
 ## License
 
-Add your preferred license here (e.g. MIT) before publishing to GitHub.
+![MIT License](./LICENSE)
