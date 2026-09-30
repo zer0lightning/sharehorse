@@ -37,6 +37,8 @@ This tool is for education purposes only.
 - [Scope & limitations](#scope--limitations)
 - [Privacy & safety](#privacy--safety)
 - [Maintaining the build database](#maintaining-the-build-database)
+- [Hardening](#hardening)
+- [Detection](#detection)
 - [Disclaimer](#disclaimer)
 - [License](#license)
 
@@ -348,6 +350,28 @@ This tool is designed to be safe to run against a production farm:
 1. Check [learn.microsoft.com/officeupdates/sharepoint-updates](https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates) for new entries (Microsoft typically publishes each month's CU/PU on the second Tuesday).
 2. Add new entries to the relevant product's array, in ascending build order, following the existing `{ build, label, date, kb }` shape.
 3. Update the "BUILD_DATABASE last verified" note in the file's header comment.
+
+## Hardening
+
+Two limits bound what hardening can do: the build is returned by `POST /_api/contextinfo` by design and cannot be hidden from an authenticated user, and there is no official Microsoft way to remove the `MicrosoftSharePointTeamServices` header (rules blank the value, not the header). Hardening reduces unauthenticated exposure and removes generic banners; patching is the actual control.
+
+- **Require authentication:** removing anonymous access makes unauthenticated requests to `/_api/*` and `/_vti_pvt/service.cnf` fail.
+- **Remove banner headers (documented):** `X-Powered-By`, `X-AspNet-Version` (`enableVersionHeader="false"`), and `Server` (`DisableServerHeader` / `removeServerHeader`).
+- **`MicrosoftSharePointTeamServices`:** no official removal - blank it via an IIS URL Rewrite outbound rule, or disable Client Integration (extreme; breaks Office integration).
+- **Not mitigable:** REST metadata, hostname-based cloud inference. Do not disable CSP to hide the 24H1+ hint.
+
+Full methods, config snippets, and Microsoft references: [Hardening](./HARDENING.md).
+
+## Detection
+
+Because Sharehorse runs in the browser on the logged-in user's session, it blends in as normal traffic - detect it by the request pattern, not a scanner signature. On-premises, the primary source is the IIS W3C logs on the web front ends, read by any SIEM; nothing requires Azure.
+
+- **Strongest single indicator:** a `GET .../_vti_pvt/service.cnf` from an interactive session (normal page loads never fetch it).
+- **Reliable rule:** one `c-ip` + `cs-username` hitting `service.cnf`, `/_api/contextinfo`, and two or more of `/_api/web`, `/_api/site`, `/_api/web/regionalsettings` against one site within ~15-30 seconds.
+- **Edge blocking:** deny `.../_vti_pvt/service.cnf` at a reverse proxy/WAF (do not blanket-block `/_vti_bin/`).
+- **Not detectable:** client-side report downloads, hostname-based cloud inference, or a single stray request.
+
+Full correlation logic, KQL (Sentinel) and SPL (Splunk) queries, tuning, and references: [Detection (on-premises)](./DETECTION.md).
 
 ## Disclaimer
 
