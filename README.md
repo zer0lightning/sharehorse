@@ -43,6 +43,7 @@ This tool is for education purposes only.
 - [Migration](#migration)
 - [Disclaimer](#disclaimer)
 - [License](#license)
+- [References](#references)
 
 ---
 
@@ -417,4 +418,5 @@ This tool is intended for legitimate IT asset inventory, patch-compliance auditi
 
 ![MIT License](./LICENSE)
 
-
+## References
+![Thank you to all. Credits and references.](./REFERENCES.md)
