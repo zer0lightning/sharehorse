@@ -75,7 +75,7 @@ Sharehorse is a passive SharePoint fingerprinter with an official-build database
 
 **Why it matters.** On-premises SharePoint is a high-value target repeatedly hit by critical, actively exploited RCEs, where exposure often comes down to a single CU. The exact build - and thus the patch level - is the line between "patched" and "exploitable." That serves assessors (confirming real patch state) and defenders (patch-compliance inventory, spotting compat-mode drift) alike.
 
-**Why it includes defense.** Fingerprinting is dual-use, so the project pairs the tool with [hardening](./HARDENING.md), [detection](./DETECTION.md) and [migration](./MIGRATE.nd)- useful to the blue team, not only the scanner.
+**Why it includes defense.** Fingerprinting is dual-use, so the project pairs the tool with [hardening](./HARDENING.md), [detection](./DETECTION.md) and [migration](./MIGRATE.md)- useful to the blue team, not only the scanner.
 
 Read-only, for systems you own or are authorized to assess. See the [Disclaimer](#disclaimer).
 
