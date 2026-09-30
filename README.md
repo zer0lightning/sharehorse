@@ -6,6 +6,8 @@ A single-file, browser-console tool that passively fingerprints a SharePoint sit
 
 **For authorized use only.** Intended for security assessment, asset inventory, and education, on systems you own or are permitted to test. See the [Disclaimer](#disclaimer).
 
+See in in action [Screenshots and Sample Reports](#samples).
+
 ---
 
 ## Table of Contents
@@ -13,7 +15,6 @@ A single-file, browser-console tool that passively fingerprints a SharePoint sit
 - [What it does](#what-it-does)
 - [Research](#research)
 - [Usage](#usage)
-- [Samples](#samples)
 - [Console helpers](#console-helpers)
 - [Batch mode](#batch-mode)
 - [How detection works](#how-detection-works)
@@ -35,6 +36,8 @@ A single-file, browser-console tool that passively fingerprints a SharePoint sit
 - [Output](#output)
 - [Network cost of the extended signals](#network-cost-of-the-extended-signals)
 - [Scope & limitations](#scope--limitations)
+- [Samples](#samples)
+- [Use cases](#use-cases)
 - [Privacy & safety](#privacy--safety)
 - [Maintaining the build database](#maintaining-the-build-database)
 - [Hardening](#hardening)
@@ -86,14 +89,6 @@ Read-only, for systems you own or are authorized to assess. See the [Disclaimer]
 4. Read the summary card, expand the collapsed groups - including the **🧬 Extended Fingerprint** group - and check your downloads folder for the saved `.txt` and `.json` reports.
 
 If an automatic download is blocked by a browser extension or CSP policy, use the [console helpers](#console-helpers) below to get the same data via clipboard instead.
-
-## Samples
-
-Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.md) for the full walkthrough.
-
-1. **Console output** - banner, collapsible signal groups, the 🧬 Extended Fingerprint group, the header-quirk note, the build-database match, and the summary card: [`reports/sharehorse-console.png`](./reports/sharehorse-console.png).
-2. **`.txt` report** - human-readable, saved to your downloads folder (or `copy(__spDetectorReport())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.txt`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.txt).
-3. **`.json` report** - machine-readable, with a dedicated `extendedFingerprint` object for inventory/audit pipelines (or `copy(__spDetectorReportJSON())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.json`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.json).
 
 ## Console helpers
 
@@ -346,6 +341,28 @@ All three are read-only, unauthenticated-by-default (same permission level as th
 - **Cloud instance detection is hostname-only** and cannot distinguish GCC (moderate) from commercial - see [signal #2](#2-sovereign--national-cloud-instance).
 - **Negotiated protocol detection depends on browser support** for the Resource Timing API and may be restricted for cross-origin requests in some browsers (notably Safari); returns nothing rather than a guess when unavailable.
 - **WOPI/Office Online Server detection is not implemented** - see [What's intentionally not implemented](#whats-intentionally-not-implemented).
+
+## Samples
+
+Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.md) for the full walkthrough.
+
+1. **Console output** - banner, collapsible signal groups, the 🧬 Extended Fingerprint group, the header-quirk note, the build-database match, and the summary card: [`reports/sharehorse-console.png`](./reports/sharehorse-console.png).
+2. **`.txt` report** - human-readable, saved to your downloads folder (or `copy(__spDetectorReport())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.txt`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.txt).
+3. **`.json` report** - machine-readable, with a dedicated `extendedFingerprint` object for inventory/audit pipelines (or `copy(__spDetectorReportJSON())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.json`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.json).
+
+## Use cases
+
+**Red team (authorized):**
+
+- Identify the exact build and CU/PU, working around the header bug that misreads 2019/SE as 2016.
+- Triage which farms are behind on patches before deeper work.
+- Passive and read-only: fingerprints, never exploits.
+
+**Blue team:**
+
+- Patch-compliance inventory across site collections ([batch mode](#batch-mode)).
+- Spot compatibility-mode drift and version leakage; reduce it with [HARDENING.md](./HARDENING.md).
+- Detect the same fingerprinting against you with [DETECTION.md](./DETECTION.md).
 
 ## Privacy & safety
 
