@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * Sharehorse — SharePoint Fingerprint Tool (Advanced)
+ * Sharehorse — SharePoint Fingerprint Tool (Advanced) by zer0lightning
  * ============================================================================
  * Passive, read-only reconnaissance tool for identifying the SharePoint
  * product edition, build number, and (where determinable) Cumulative/Public
