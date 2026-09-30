@@ -12,6 +12,7 @@ This tool is for education purposes only.
 ## Table of Contents
 
 - [What it does](#what-it-does)
+- [Research](#research)
 - [Usage](#usage)
 - [Samples](#samples)
 - [Console helpers](#console-helpers)
@@ -39,6 +40,7 @@ This tool is for education purposes only.
 - [Maintaining the build database](#maintaining-the-build-database)
 - [Hardening](#hardening)
 - [Detection](#detection)
+- [Migration](#migration)
 - [Disclaimer](#disclaimer)
 - [License](#license)
 
@@ -63,6 +65,18 @@ Beyond the farm build, it also reports facts about the specific site/tenant that
 - **Hub-site and Microsoft 365 Group association** - topology facts for an inventory.
 
 It performs no vulnerability scanning, exploitation, or write operations. See [Privacy & safety](#privacy--safety).
+
+## Research
+
+Sharehorse is a passive SharePoint fingerprinter with an official-build database (285 entries: 2013, 2016, 2019, Subscription Edition), two documented product quirks (the `MicrosoftSharePointTeamServices` header bug and the 2019/SE shared-RTM-build collision), and defensive material.
+
+**The problem.** SharePoint exposes its version in no single reliable place, and the header people reach for first - `MicrosoftSharePointTeamServices` - is metabase-cached, varies across load-balanced nodes, and on 2019+/SE is malformed (reports build `0`, misclassifying the farm as 2016). Trusting it gives confidently wrong answers.
+
+**Why it matters.** On-premises SharePoint is a high-value target repeatedly hit by critical, actively exploited RCEs, where exposure often comes down to a single CU. The exact build - and thus the patch level - is the line between "patched" and "exploitable." That serves assessors (confirming real patch state) and defenders (patch-compliance inventory, spotting compat-mode drift) alike.
+
+**Why it includes defense.** Fingerprinting is dual-use, so the project pairs the tool with [hardening](./HARDENING.md) and [detection](./DETECTION.md) - useful to the blue team, not only the scanner.
+
+Read-only, for systems you own or are authorized to assess. See the [Disclaimer](#disclaimer).
 
 ## Usage
 
@@ -373,6 +387,23 @@ Because Sharehorse runs in the browser on the logged-in user's session, it blend
 
 Full correlation logic, KQL (Sentinel) and SPL (Splunk) queries, tuning, and references: [Detection (on-premises)](./DETECTION.md).
 
+## Migration
+
+On-premises SharePoint keeps a patch-critical, internet-facing RCE target on your perimeter. The 2025 "ToolShell" wave (CVE-2025-53770/53771) compromised 400+ organizations, including US federal agencies, and hit on-premises farms only - SharePoint Online was not vulnerable. Across the notable SharePoint RCEs (2019-0604 through ToolShell), the fix usually existed; unpatched, exposed farms were the casualties.
+
+Moving to SharePoint Online shifts risk under the shared-responsibility model, but not all of it:
+
+- **Transfers to Microsoft:** application/server patching, infrastructure and network hardening, continuous updates - the "one CU behind" incident class largely disappears.
+- **Stays yours:** identity and access (Entra ID, MFA, conditional access), data governance and oversharing, third-party apps, and tenant misconfiguration.
+
+Content and customizations move unevenly, too:
+
+- **Transfers (SPMT):** libraries, lists, files, metadata, modern pages, version history.
+- **Needs rework:** 2010/2013 workflows (to Power Automate), InfoPath forms (to Power Apps/Forms), classic branding, managed metadata, BCS.
+- **Does not transfer:** full-trust farm solutions (WSP), event receivers, timer jobs, and web.config/IIS customizations - these must be rebuilt (SPFx, remote event receivers, Azure Functions).
+
+Full CVE/exploitation records, metrics, and the complete transfer breakdown: [MIGRATE.md](./MIGRATE.md).
+
 ## Disclaimer
 
 This tool is intended for legitimate IT asset inventory, patch-compliance auditing, and authorized security assessments. Use it only against SharePoint sites you own or are explicitly authorized to inspect.
@@ -385,3 +416,5 @@ This tool is intended for legitimate IT asset inventory, patch-compliance auditi
 ## License
 
 ![MIT License](./LICENSE)
+
+
