@@ -13,7 +13,7 @@ This tool is for education purposes only.
 
 - [What it does](#what-it-does)
 - [Usage](#usage)
-- [SharePoint Detection Summary](./screenshot-sh.png)
+- [Sample Reports](./reports/SAMPLE.MD)
 - [Console helpers](#console-helpers)
 - [Batch mode](#batch-mode)
 - [How detection works](#how-detection-works)
@@ -70,6 +70,14 @@ It performs no vulnerability scanning, exploitation, or write operations. See [P
 4. Read the summary card, expand the collapsed groups - including the **🧬 Extended Fingerprint** group - and check your downloads folder for the saved `.txt` and `.json` reports.
 
 If an automatic download is blocked by a browser extension or CSP policy, use the [console helpers](#console-helpers) below to get the same data via clipboard instead.
+
+## Samples
+
+Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.md) for the full walkthrough.
+
+1. **Console output** - banner, collapsible signal groups, the 🧬 Extended Fingerprint group, the header-quirk note, the build-database match, and the summary card: [`/reports/sharehorse-console.png`](./reports/sharehorse-console.png).
+2. **`.txt` report** - human-readable, saved to your downloads folder (or `copy(__spDetectorReport())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.txt`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.txt).
+3. **`.json` report** - machine-readable, with a dedicated `extendedFingerprint` object for inventory/audit pipelines (or `copy(__spDetectorReportJSON())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.json`](.reports/sharepoint-detection_sharepoint.local_2026-09-30.json).
 
 ## Console helpers
 
