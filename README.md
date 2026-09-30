@@ -73,7 +73,7 @@ If an automatic download is blocked by a browser extension or CSP policy, use th
 
 ## Samples
 
-Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.md) for the full walkthrough.
+Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.MD) for the full walkthrough.
 
 1. **Console output** - banner, collapsible signal groups, the 🧬 Extended Fingerprint group, the header-quirk note, the build-database match, and the summary card: [`/reports/sharehorse-console.png`](./reports/sharehorse-console.png).
 2. **`.txt` report** - human-readable, saved to your downloads folder (or `copy(__spDetectorReport())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.txt`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.txt).
