@@ -1,0 +1,45 @@
+name: Update SharePoint signatures
+
+on:
+  schedule:
+    # Runs every day at 06:12 UTC. (Minute jittered off :00 so the job isn't
+    # queued behind the crowd of top-of-hour GitHub-hosted runners.)
+    - cron: "12 6 * * *"
+  workflow_dispatch: {}  # allow manual runs from the Actions tab
+
+permissions:
+  contents: write  # needed to push the updated file back
+
+concurrency:
+  group: update-sharepoint-sigs
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Regenerate signatures
+        run: node sharepoint/update-signatures.js
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- sharepoint/sharehorse.js; then
+            echo "No signature changes today."
+            exit 0
+          fi
+
+          git add sharepoint/sharehorse.js
+          git commit -m "chore: update SharePoint signatures ($(date -u +%Y-%m-%d))"
+          git push
