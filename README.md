@@ -13,7 +13,7 @@ This tool is for education purposes only.
 
 - [What it does](#what-it-does)
 - [Usage](#usage)
-- [Sample Reports](./reports/SAMPLE.MD)
+- [Samples](#samples)
 - [Console helpers](#console-helpers)
 - [Batch mode](#batch-mode)
 - [How detection works](#how-detection-works)
