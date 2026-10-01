@@ -2,6 +2,8 @@
  * Sharehorse - SharePoint Fingerprint Tool
  * https://github.com/zer0lightning/sharehorse
  *
+ * DISCLAIMER: For authorized use only. Intended for security assessment, asset inventory, and education, on systems you own or are permitted to test.
+ *
  * Passive, read-only fingerprinting of a SharePoint site: product edition,
  * build number, and CU/PU, plus an extended fingerprint. Usage, build-database
  * notes, hardening, detection, and references are in the repo.
