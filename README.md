@@ -4,9 +4,9 @@
 
 A single-file, browser-console tool that passively fingerprints a SharePoint site - on-premises or online. It identifies the product edition, build number, and Cumulative/Public Update (CU/PU) from a local database of the official Microsoft build history, then gathers a wider fingerprint: site collection compatibility mode, sovereign cloud instance, topology, regional settings, and infrastructure headers.
 
-**For authorized use only.** Intended for security assessment, asset inventory, and education, on systems you own or are permitted to test. See the [Disclaimer](#disclaimer).
+**For authorized use only.** For security assessment, asset inventory, and education, on systems you own or are permitted to test. See the [Disclaimer](#disclaimer).
 
-See in in action [Screenshots and Sample Reports](#samples).
+See it in action: [Screenshots and sample reports](#samples).
 
 ---
 
@@ -51,58 +51,48 @@ See in in action [Screenshots and Sample Reports](#samples).
 
 ## What it does
 
-SharePoint doesn't expose its version number in a single reliable place. Depending on farm configuration, the real build number may only be visible through one of several signals - and one commonly used signal (an HTTP response header) has a known, unfixed formatting bug since SharePoint 2019. Sharehorse.js:
+SharePoint doesn't expose its version in one reliable place, and the signal most people reach for (an HTTP header) has an unfixed formatting bug since 2019. Sharehorse:
 
-1. Collects every version-related signal it can reach in the current session, with an 8-second timeout per request.
-2. Cross-validates those signals against each other, working around the known header bug.
-3. Resolves REST API calls against the actual site collection you're on, not the domain root (see [Site-relative REST API resolution](#site-relative-rest-api-resolution)).
-4. Matches the resolved build number against a local database of the **full official Microsoft build history** covering SharePoint 2013, 2016, 2019, and Subscription Edition.
-5. Reports the product, exact CU/PU name, KB number, release date, and an explicit confidence level - including the documented ambiguity between SharePoint 2019 and Subscription Edition at their shared RTM build.
-6. Flags non-fatal issues (timeouts, auth redirects, 401/403s) as explicit **Diagnostics** rather than failing silently.
-7. Saves a `.txt` and a `.json` report automatically, and can scan multiple site collections in one run (**batch mode**), producing a combined CSV.
+1. Collects every version signal it can reach in the current session (8-second timeout per request).
+2. Cross-validates them, working around the header bug.
+3. Resolves REST calls against the actual site collection, not the domain root (see [Site-relative REST API resolution](#site-relative-rest-api-resolution)).
+4. Matches the build against a local database of the **full official Microsoft build history** (2013, 2016, 2019, Subscription Edition).
+5. Reports product, exact CU/PU, KB, release date, and a confidence level - including the 2019/SE shared-RTM ambiguity.
+6. Flags timeouts, auth redirects, and 401/403s as explicit **Diagnostics**.
+7. Saves `.txt` and `.json` reports, and can scan many site collections at once (**batch mode**) into a combined CSV.
 
-Beyond the farm build, it also reports facts about the specific site/tenant that a build number alone can't show:
+Beyond the farm build, it also surfaces: **compatibility-mode drift** (a site stuck on an older level than the farm), **GCC High vs. commercial** cloud (from the hostname, free), and **hub-site / Microsoft 365 Group** association.
 
-- A site collection can be stuck in an **older compatibility mode** than the farm it runs on.
-- Whether a tenant is on **GCC High vs. commercial** cloud - relevant to compliance, detected from the hostname at no network cost.
-- **Hub-site and Microsoft 365 Group association** - topology facts for an inventory.
-
-It performs no vulnerability scanning, exploitation, or write operations. See [Privacy & safety](#privacy--safety).
+No vulnerability scanning, exploitation, or writes. See [Privacy & safety](#privacy--safety).
 
 ## Research
 
-Sharehorse is a passive SharePoint fingerprinter with an official-build database covering 2013, 2016, 2019, and Subscription Edition, two documented product quirks (the `MicrosoftSharePointTeamServices` header bug and the 2019/SE shared-RTM-build collision), and defensive material.
+The version header people trust first - `MicrosoftSharePointTeamServices` - is metabase-cached, varies across load-balanced nodes, and on 2019+/SE is malformed (reports build `0`, misclassifying the farm as 2016). Sharehorse instead reads reliable sources and maps the build to the exact CU.
 
-**The problem.** SharePoint exposes its version in no single reliable place, and the header people reach for first - `MicrosoftSharePointTeamServices` - is metabase-cached, varies across load-balanced nodes, and on 2019+/SE is malformed (reports build `0`, misclassifying the farm as 2016). Trusting it gives confidently wrong answers.
+This matters because on-premises SharePoint is a high-value, actively exploited target where exposure often comes down to a single CU - so the exact build is the line between "patched" and "exploitable." That serves both assessors (real patch state) and defenders (patch-compliance inventory, compat-mode drift).
 
-**Why it matters.** On-premises SharePoint is a high-value target repeatedly hit by critical, actively exploited RCEs, where exposure often comes down to a single CU. The exact build - and thus the patch level - is the line between "patched" and "exploitable." That serves assessors (confirming real patch state) and defenders (patch-compliance inventory, spotting compat-mode drift) alike.
-
-**Why it includes defense.** Fingerprinting is dual-use, so the project pairs the tool with [hardening](./HARDENING.md), [detection](./DETECTION.md), and [migration](./MIGRATE.md) - useful to the blue team, not only the scanner.
-
-Read-only, for systems you own or are authorized to assess. See the [Disclaimer](#disclaimer).
+Fingerprinting is dual-use, so the project also ships [hardening](./HARDENING.md), [detection](./DETECTION.md), and [migration](./MIGRATE.md) guidance. Read-only, for systems you own or may test. See the [Disclaimer](#disclaimer).
 
 ## Usage
 
-1. Navigate to the target SharePoint site in Chrome (or any Chromium-based browser).
-2. Open DevTools (`F12`) → **Console** tab.
-3. Paste the full contents of `sharehorse.js` and press Enter.
-4. Read the summary card, expand the collapsed groups - including the **🧬 Extended Fingerprint** group - and check your downloads folder for the saved `.txt` and `.json` reports.
+1. Open the target SharePoint site in Chrome (or any Chromium browser).
+2. DevTools (`F12`) → **Console**.
+3. Paste all of `sharehorse.js` and press Enter.
+4. Read the summary card, expand the collapsed groups (including **🧬 Extended Fingerprint**), and check your downloads for the `.txt`/`.json` reports.
 
-If an automatic download is blocked by a browser extension or CSP policy, use the [console helpers](#console-helpers) below to get the same data via clipboard instead.
+If a download is blocked (extension or CSP), use the [console helpers](#console-helpers) to copy the data from the clipboard instead.
 
 ## Console helpers
 
-After the script runs once, these are available in the console for the rest of the session:
+Available after the script runs once, for the rest of the session:
 
 | Function | Returns |
 |---|---|
-| `__spDetectorReport()` | Full plain-text report (same as the downloaded `.txt`) |
-| `__spDetectorReportJSON()` | Full structured report as a JSON string - includes a dedicated `extendedFingerprint` object |
-| `__spDetectorSummary()` | Just the compact summary card as text |
-| `__spDetectorLastResult` | The raw detection result object, including all extended fields (not a function - access directly) |
-| `__spDetectorBatch(urls)` | Runs [batch mode](#batch-mode) against an array of URLs |
-
-Example - copy just the summary to your clipboard:
+| `__spDetectorReport()` | Full plain-text report (same as the `.txt`) |
+| `__spDetectorReportJSON()` | Full JSON report string (with an `extendedFingerprint` object) |
+| `__spDetectorSummary()` | Just the summary card as text |
+| `__spDetectorLastResult` | Raw detection result object (property, not a function) |
+| `__spDetectorBatch(urls)` | Runs [batch mode](#batch-mode) over an array of URLs |
 
 ```js
 copy(__spDetectorSummary())
@@ -110,7 +100,7 @@ copy(__spDetectorSummary())
 
 ## Batch mode
 
-Scan multiple site collections on the **same origin** in one go:
+Scan multiple site collections on the **same origin**:
 
 ```js
 await __spDetectorBatch([
@@ -119,316 +109,252 @@ await __spDetectorBatch([
 ])
 ```
 
-This prints a compact comparison table (Hostname, Path, Product, Build, CU/PU, Confidence) and downloads a combined `sharepoint-detection-batch_*.csv`. The CSV includes five extended columns - `CloudEnvironment`, `SiteUIVersion`, `CompatibilityModeFlag`, `HubSiteId`, `GroupConnected` - which surfaces, in one pass, which site collections are still in an older compat mode. Results are also available afterward via `__spDetectorBatchResults`.
+Prints a comparison table and downloads a combined `sharepoint-detection-batch_*.csv` with five extra columns (`CloudEnvironment`, `SiteUIVersion`, `CompatibilityModeFlag`, `HubSiteId`, `GroupConnected`) - handy for spotting which sites are still in an older compat mode. Results also at `__spDetectorBatchResults`.
 
-**Same-origin only.** Any URL whose origin (scheme + host + port) doesn't match the current page's origin is skipped with a warning - cross-origin requests would be blocked by CORS and wouldn't carry the right session cookies. This is for auditing multiple site collections within one farm/tenant, not multiple unrelated deployments.
-
-**Pass site collection root URLs, not arbitrary page URLs.** For the current page, the script uses SharePoint's `_spPageContextInfo.webAbsoluteUrl` global to find the site root regardless of page depth. For other batch targets there's no equivalent authoritative client-side signal - the script trusts a bare URL like `.../sites/TeamB` as the site root, and only trims the last path segment when it clearly looks like a page or file (has an extension) or a known system folder (`_layouts`, `SitePages`, etc.). Site collection root URLs resolve correctly every time; deep page URLs may resolve to a subfolder rather than the true root.
+- **Same-origin only.** Cross-origin targets are skipped (CORS blocks them and they'd lack the right session cookies). For one farm/tenant, not unrelated deployments.
+- **Pass site collection root URLs**, not deep page URLs. The current page uses `_spPageContextInfo.webAbsoluteUrl` to find its root; other targets are trusted as-is unless the last segment clearly looks like a page/file or a system folder (`_layouts`, `SitePages`, etc.). Deep page URLs may resolve to a subfolder.
 
 ## How detection works
 
-The script gathers signals from four independent sources, in priority order:
+Four sources, in priority order:
 
 | # | Source | Endpoint | Reliability |
 |---|--------|----------|-------------|
 | 1 | `vti_buildversion` | `GET /_vti_pvt/service.cnf` | High - correctly formatted, on-prem only |
-| 2 | REST API `LibraryVersion` | `POST /_api/contextinfo` (site-relative) | High - correctly formatted, works on-prem and online |
-| 3 | `vti_extenderversion` | `GET /_vti_pvt/service.cnf` | High - same format, used as one more fallback rung |
-| 4 | `MicrosoftSharePointTeamServices` | HTTP response header (any request) | **Unreliable on 2019+/SE** - see below |
+| 2 | REST `LibraryVersion` | `POST /_api/contextinfo` (site-relative) | High - on-prem and online |
+| 3 | `vti_extenderversion` | `GET /_vti_pvt/service.cnf` | High - fallback rung |
+| 4 | `MicrosoftSharePointTeamServices` | HTTP response header | **Unreliable on 2019+/SE** - last resort |
 
-Sources 1-3 are always preferred for classification and lookup. The HTTP header is only used as a last resort, and only after being checked for the known formatting bug described next.
-
-Each successfully-read signal is logged as an entry in **Detection Evidence**, including the full resolved URL that was queried, so you can independently verify every claim the script makes.
+Sources 1-3 are preferred; the header is used only after the bug check below. Every signal read is logged under **Detection Evidence** with its full resolved URL.
 
 ## Site-relative REST API resolution
 
-A naive `fetch("/_api/contextinfo")` resolves against the domain root because of the leading slash - on a site under a managed path (e.g. `https://tenant.sharepoint.com/sites/TeamA/...`), that silently queries the **root** site collection's REST API instead of the site being inspected. Root and sub-sites can be provisioned at different times/patch levels, especially in SharePoint Online multi-geo tenants or hybrid on-prem farms with per-site upgrade lag, so this can produce a confidently wrong answer.
-
-The script resolves this two ways:
-
-- **On the current page:** uses SharePoint's `_spPageContextInfo.webAbsoluteUrl` global (present on virtually every classic and modern SharePoint page) to find the true site root, regardless of page depth.
-- **In batch mode, for other targets:** falls back to a path heuristic (see [Batch mode](#batch-mode)), since that global only describes the currently-loaded page.
-
-The **Raw Signals Collected** group shows which base URL was used (`Site Base URL`) and whether it came from the page-context global or the fallback heuristic (`Resolved via _spPageContextInfo`).
+`fetch("/_api/contextinfo")` resolves against the origin root (leading slash), so on a managed-path site (`.../sites/TeamA/...`) it silently queries the **root** site collection instead - which can be at a different patch level. Sharehorse resolves the true root via `_spPageContextInfo.webAbsoluteUrl` on the current page, and a path heuristic for batch targets (see [Batch mode](#batch-mode)). The **Raw Signals** group shows which base URL was used and how it was resolved.
 
 ## The `MicrosoftSharePointTeamServices` header bug
 
-On SharePoint Server 2019 and Subscription Edition, the `MicrosoftSharePointTeamServices` response header does not report the real build number. It reports a malformed `16.0.0.XXXXX` string, where:
+On SharePoint 2019 and Subscription Edition this header reports a malformed `16.0.0.XXXXX` string: the build segment (3rd octet) is zeroed, the real build is pushed into the 4th octet, and the revision is lost. So build `16.0.19725.20434` reports `16.0.0.19725` - which parses as build `0` and misclassifies the farm as **2016**. It's a long-standing, Microsoft-acknowledged, unfixed issue.
 
-- The real "build" segment (3rd octet) is zeroed out.
-- The actual build number is shoved into the 4th octet instead.
-- The true revision number is lost entirely.
-
-This is a long-standing, Microsoft-acknowledged issue (first reported publicly around SharePoint 2019's release) that has never been fixed. A farm running build `16.0.19725.20434` reports `MicrosoftSharePointTeamServices: 16.0.0.19725` - which, parsed naively, looks like a build number of `0`, landing in the SharePoint **2016** heuristic bucket. Trusting this header at face value causes a serious misclassification.
-
-The script:
-
-1. Detects the `16.0.0.XXXXX` pattern (`isLikelyBuggyTeamServicesFormat`).
-2. Deprioritizes the header in favor of `vti_buildversion` / REST `LibraryVersion` / `vti_extenderversion` for all classification and lookups.
-3. Cross-validates the header's trailing segment against the reliable sources, and surfaces a **Header Quirk Detected** note confirming the match (or flagging a discrepancy if the two disagree).
+Sharehorse detects the `16.0.0.XXXXX` pattern (`isLikelyBuggyTeamServicesFormat`), deprioritizes the header in favor of `vti_buildversion` / REST `LibraryVersion` / `vti_extenderversion`, and cross-checks the header's trailing segment against those - surfacing a **Header Quirk Detected** note that confirms the match or flags a discrepancy.
 
 ## The SharePoint 2019 / Subscription Edition RTM collision
 
-SharePoint Server 2019 RTM and SharePoint Server Subscription Edition RTM ship the **exact same build number**: `16.0.10337.12109`. This is a documented fact about Microsoft's release engineering, not a detection bug - the two products started from an identical build string before diverging via their respective update tracks.
-
-Because of this, a build-number match alone cannot distinguish the two products at that build. Rather than guessing, the script detects when a build matches multiple products' entries simultaneously and reports it as an explicit **ambiguous** result, listing all matching candidates and suggesting how to disambiguate manually (Central Administration's version display, farm install history, or license/purchase records).
+2019 RTM and Subscription Edition RTM ship the **exact same build**: `16.0.10337.12109` (a real release-engineering fact, not a bug - they diverged later). A build match alone can't tell them apart at that build, so Sharehorse reports it as an explicit **ambiguous** result, lists the candidates, and suggests manual disambiguation (Central Admin version display, install history, or license records).
 
 ## Diagnostics: timeouts, auth redirects, and access errors
 
 Every request is wrapped with:
 
-- An **8-second timeout** (`AbortController`), so a hung or slow endpoint can't stall the script.
-- **Redirect detection.** If a request is redirected somewhere that looks like a login page (matches `login`/`signin`/`adfs`/`oauth2`/`authorize`/`sts.`, or lands on a different host), that's flagged rather than treated as "endpoint not found" - a redirect to sign-in usually means the current session lacks access, which is different from the endpoint not existing.
-- **401/403 detection.** Explicitly called out as access-denied rather than a generic failure.
+- An **8-second timeout** (`AbortController`).
+- **Redirect detection** - a redirect to something login-like (`login`/`signin`/`adfs`/`oauth2`/`authorize`/`sts.`, or a different host) is flagged as "session lacks access," not "endpoint missing."
+- **401/403 detection** - called out as access-denied.
 
-Anything caught this way shows up in a collapsible **🩺 Diagnostics** console group (only shown when there's something to report) and in both the `.txt` and `.json` reports.
+These appear in a collapsible **🩺 Diagnostics** group (only when there's something to report) and in both reports.
 
 ## The five extended fingerprint signals
 
 ### 1. Site collection compatibility mode
 
-A SharePoint site collection can run in an **older UI/behavior compatibility level** than the farm's actual binaries - most commonly a site left in SharePoint 2013 mode (`UIVersion 15`) after an upgrade to a newer farm (2016/2019/Subscription Edition, major version 16). A site collection's compatibility level is not always upgraded after a farm upgrade, so this drift is common and is invisible to any tool that only checks the farm's patch level.
-
-Sharehorse fetches `/_api/web?$select=Title,WebTemplate,Configuration,UIVersion,UIVersionConfigurationEnabled,Language,LanguageName` and compares the returned `UIVersion` against the major version of the detected farm build. A mismatch produces an explicit warning:
+A site collection can run at an **older UI/behavior level** than the farm's binaries - commonly left in SharePoint 2013 mode (`UIVersion 15`) after an upgrade to a major-16 farm. Sharehorse fetches `/_api/web?$select=Title,WebTemplate,Configuration,UIVersion,UIVersionConfigurationEnabled,Language,LanguageName` and compares `UIVersion` to the detected build's major version. A mismatch warns:
 
 > ⚠ This site collection is running in UIVersion 15 compatibility mode (behaves like SharePoint 2013), even though the farm itself is on build major 16 (SharePoint 2016/2019/Subscription Edition). The farm's patch level and this site's rendering/behavior level are two different things - run Set-SPSite -CompatibilityLevel to upgrade this specific site collection if desired.
 
-When the two match (e.g. `UIVersion 16` against a major-16 farm), no warning is produced.
+Matching versions produce no warning.
 
 ### 2. Sovereign / national cloud instance
 
-Hostname string-matching - **zero extra network requests**. Detects:
+Hostname matching - **zero extra requests**:
 
 | Hostname pattern | Cloud |
 |---|---|
 | `*.sharepoint.us` | US Government (GCC High) |
-| `*-my.sharepoint.us` | US Government (GCC High) - personal/OneDrive site |
+| `*-my.sharepoint.us` | GCC High - OneDrive/personal |
 | `*.sharepoint-mil.us` | US Government (DoD) |
-| `*.sharepoint.cn` | Operated by 21Vianet (China) |
-| `*.sharepoint.de` | Germany cloud (legacy - Microsoft retired this cloud in 2021) |
+| `*.sharepoint.cn` | 21Vianet (China) |
+| `*.sharepoint.de` | Germany cloud (legacy - retired 2021) |
 | `*.sharepoint.com` | Commercial **or** GCC |
-| `*-my.sharepoint.com` | Commercial or GCC - personal/OneDrive site |
+| `*-my.sharepoint.com` | Commercial or GCC - OneDrive/personal |
 
-Caveat, stated in the tool's own output: GCC (the "moderate" US Government Community Cloud) uses the same `*.sharepoint.com` domain as commercial tenants and cannot be distinguished by hostname alone - only GCC High and DoD have their own domain suffixes.
+GCC (moderate) shares the `*.sharepoint.com` domain with commercial tenants and can't be told apart by hostname - only GCC High and DoD have their own suffixes. The tool says so in its output.
 
 ### 3. Site collection topology
 
-One GET, to `/_api/site?$select=Id,HubSiteId,GroupId,ReadOnly`:
+One GET to `/_api/site?$select=Id,HubSiteId,GroupId,ReadOnly`:
 
-- **Site Id** - a stable GUID, useful as a correlator across re-runs or if the site is renamed/moved.
-- **Hub site association** - whether this site is connected to a SharePoint hub. (Empty-GUID responses are treated as "not hub-associated," not displayed as an all-zeros string.)
-- **Microsoft 365 Group connection** - whether this is a Group-connected team site.
-- **Read-only flag** - whether the site collection is locked for read-only access (common during tenant migrations).
+- **Site Id** - stable GUID, a correlator across re-runs/renames.
+- **Hub site** - associated or not (empty GUID shown as "not hub-associated").
+- **Microsoft 365 Group** - Group-connected or not.
+- **Read-only** - site locked (common during migrations).
 
 ### 4. Regional settings & installed languages
 
-One combined request to `/_api/web/regionalsettings?$select=LocaleId,TimeZone/Description&$expand=InstalledLanguages,TimeZone` - pulls the site's locale ID, time zone description, and every installed MUI language pack in one trip. Operational rather than version-specific, and graceful-degrading: many locked-down farms will 403 this without affecting the rest of the run.
+One request to `/_api/web/regionalsettings?$select=LocaleId,TimeZone/Description&$expand=InstalledLanguages,TimeZone` - locale, time zone, and installed MUI language packs in one trip. Operational, not version-specific; many locked-down farms 403 it harmlessly.
 
 ### 5. Infrastructure signals
 
-Three sub-parts, all read from responses the script is already making (no new requests except where noted):
+Read off responses already fetched (no new requests):
 
-- **Content-Security-Policy header presence** - SharePoint Server Subscription Edition **Version 24H1** (build `16.0.17328.20136`, March 2024) introduced the ability for SharePoint to emit its own CSP header. Its *presence* is a soft corroborating signal that the farm is on 24H1+; its *absence* proves nothing (many farms leave it disabled). Reported as weight-1 evidence and excluded from the confidence-scoring "corroborated by 2+ signals" threshold, so it can't inflate confidence in the build number.
-- **Negotiated HTTP protocol** (`h2` / `http/1.1` / `h3`) - read via the browser's Resource Timing API off a request already made. Says nothing about the SharePoint build, but is a fact about the CDN/proxy/load-balancer layer in front of the farm. Returns nothing if the API is unavailable.
-- **Reverse-proxy / WAF / CDN headers** - `Via`, `X-Forwarded-For/Host/Proto`, `CF-RAY`/`CF-Cache-Status` (Cloudflare), `X-Azure-Ref`/`X-Azure-FDID` (Azure Front Door/App Gateway), `X-Akamai-Transformed` (Akamai), `X-Served-By`/`X-Cache-Hits`/`X-Fastly-Request-ID` (Fastly), and `Age`. Explains infrastructure that may be stripping/rewriting other headers - relevant to the "no version signal retrieved" fallback message.
+- **CSP header presence** - SE **24H1** (build `16.0.17328.20136`, March 2024) can emit its own CSP header. Presence is a soft 24H1+ hint; absence proves nothing. Weight-1, excluded from the build-confidence threshold.
+- **Negotiated HTTP protocol** (`h2`/`http/1.1`/`h3`) via the Resource Timing API - a fact about the proxy/CDN layer, not the build.
+- **Reverse-proxy / WAF / CDN headers** - `Via`, `X-Forwarded-*`, `CF-RAY`/`CF-Cache-Status`, `X-Azure-Ref`/`X-Azure-FDID`, `X-Akamai-Transformed`, `X-Served-By`/`X-Cache-Hits`/`X-Fastly-Request-ID`, `Age`. Explains infra that may strip other headers.
 
 ## Extended contextinfo fields
 
-Beyond the build number, the script extracts `SupportedSchemaVersions`, `SiteFullUrl`, and `WebFullUrl` from the `POST /_api/contextinfo` response it already fetches. It cross-checks the server's own `WebFullUrl` against the site base URL it resolved, and raises a diagnostic if the two disagree - a direct signal that the site-root resolution landed on the wrong site collection.
+From the `POST /_api/contextinfo` response it already fetches, Sharehorse also reads `SupportedSchemaVersions`, `SiteFullUrl`, and `WebFullUrl`, and raises a diagnostic if the server's `WebFullUrl` disagrees with the resolved site base URL (a sign the resolution landed on the wrong site).
 
 ## What's intentionally not implemented
 
-**Office Online Server / WOPI discovery.** Probing WOPI discovery would reveal whether a separately-configured Office Online Server is present and roughly what generation it is - a distinct fact from the SharePoint farm's own version. It's not in this build because the discovery endpoint and response shape need more verification before shipping a confident implementation. Flagged in the script's header comment.
+**Office Online Server / WOPI discovery** - a distinct fact from the farm version, but the endpoint/response shape needs more verification before shipping confidently. A known gap, flagged in the script header.
 
-**Deliberately excluded, not deferred:**
-
-- **Feature/solution enumeration** (`_api/web/Features`) - read-only, but probes installed *capabilities* rather than reading a version string; closer to attack-surface reconnaissance than fingerprinting.
-- **Search queries** (`_api/search/query`) - requires executing a search against actual content, beyond metadata-reading.
-- **SOAP endpoints** (`/_vti_bin/*.asmx`) - legacy, mostly dead weight on modern farms.
-- **Subsite enumeration** (`_api/web/webs`) - site-structure reconnaissance, not fingerprinting.
-- **Permission probing** - checking what the current session can do is access-mapping, not version detection.
+**Deliberately excluded (recon-adjacent, not fingerprinting):** feature/solution enumeration (`_api/web/Features`), search queries (`_api/search/query`), SOAP endpoints (`/_vti_bin/*.asmx`), subsite enumeration (`_api/web/webs`), and permission probing.
 
 ## Build database
 
-The script embeds the official SharePoint update history for four product lines, transcribed from Microsoft's release-notes page:
+Official update history for four product lines, from Microsoft's release-notes page:
 
 | Product | Coverage |
 |---|---|
 | SharePoint Server 2013 | RTM (2012-10-16) → end of support April 2023 |
 | SharePoint Server 2016 | RTM (2016-05-04) → end of support 2026-07-14 |
 | SharePoint Server 2019 | RTM (2018-10-22) → end of support 2026-07-14 |
-| SharePoint Server Subscription Edition | RTM (2021-11-02) → current (updated monthly) |
+| Subscription Edition | RTM (2021-11-02) → current (updated monthly) |
 
-Every entry includes the build number, a human-readable label (including SE's feature-update milestones - `23H1`, `24H1`, `24H2`, `25H1`, `25H2`, etc.), the release date, and the associated Microsoft KB number where applicable. The data lives in the `BUILD_DATABASE` object inside `sharehorse.js`, keyed by product name, each an array of `{ build, label, date, kb }` entries in ascending build order. The database is regenerated by the daily updater, so the exact entry count grows over time.
+Each entry is `{ build, label, date, kb }` in the `BUILD_DATABASE` object, ascending build order; labels include SE feature-update milestones (`23H1`, `24H1`, ...). 2013 is curated to RTM plus later CUs (EOL since April 2023); 2016/2019/SE include **every** monthly entry. The daily updater grows it over time. A build not in the table falls back to the **closest known build** by numeric distance.
 
 **Source of truth:** [learn.microsoft.com/officeupdates/sharepoint-updates](https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates)
 
-2013's list is curated to RTM plus its later CUs rather than every monthly update, since the product has been out of support since April 2023. 2016, 2019, and Subscription Edition include **every** monthly entry from Microsoft's table.
-
-If a detected build isn't in the table (e.g. a CU released after the last update), the script falls back to reporting the **closest known build** by numeric distance rather than failing silently.
-
 ## Automated signature updates
 
-`BUILD_DATABASE` is kept current automatically by a scheduled GitHub Action, so new CUs appear without manual transcription.
+`BUILD_DATABASE` stays current via a scheduled GitHub Action.
 
-**Updater - `scripts/update-signatures.js`** (Node, no third-party dependencies; uses the built-in `fetch`, Node ≥ 18):
+**Updater - `scripts/update-signatures.js`** (Node ≥ 18, no dependencies):
 
-- Fetches the Microsoft release-notes page in Markdown form (`…/sharepoint-updates?accept=text/markdown`).
-- Parses the four living-product tables (Subscription Edition, 2019, 2016, 2013) into `{ build, kb, date }` rows, taking the first build in the Version cell and the first (STS / language-independent) KB in the KB cell.
-- **Merges, never regenerates.** Only build numbers not already in `BUILD_DATABASE` are appended, to the end of the matching product array, in the existing `{ build, label, date, kb }` shape. Existing hand-curated entries - RTM notes, feature-update milestones, end-of-support labels - are left byte-for-byte untouched.
-- New entries get a derived label of `"<Month> <Year> CU"` and a date of `YYYY-MM-DD` (or `YYYY-MM` when Microsoft's table gives only a month).
-- **Stamps the date.** When (and only when) it adds a build, it bumps the in-script `BUILD_DATABASE_LAST_UPDATED` constant to the run date. `SHAREHORSE_VERSION` is never touched.
-- **Self-protecting:** it runs `node --check` on the result and refuses to write if the file wouldn't parse, and aborts if a product section yields zero rows (a signal the page layout changed) rather than blanking the table. If nothing new is found, the file is byte-identical, so no commit is produced.
+- Fetches the release-notes page as Markdown (`…/sharepoint-updates?accept=text/markdown`) and parses the four living-product tables, taking the first build and first (STS) KB per row.
+- **Merges, never regenerates** - only appends builds not already present, in the existing shape. Hand-curated labels/notes are untouched.
+- New entries get a `"<Month> <Year> CU"` label and a `YYYY-MM-DD` (or `YYYY-MM`) date.
+- **Stamps `BUILD_DATABASE_LAST_UPDATED`** and bumps the patch of `SHAREHORSE_VERSION` only when it actually adds a build.
+- **Self-protecting** - runs `node --check` and refuses to write unparseable output; aborts if a section yields zero rows (page changed) rather than blanking the table. No new builds → file unchanged → no commit.
 
-**Workflow - `.github/workflows/update-sharepoint-sigs.yml`:**
-
-- Runs daily at **06:12 UTC** (`cron: "12 6 * * *"`, minute jittered off `:00` to avoid the top-of-hour runner queue), plus a manual **Run workflow** button (`workflow_dispatch`).
-- Checks out the repo, sets up Node, runs `node scripts/update-signatures.js`, then commits and pushes **only if `sharehorse.js` actually changed** - so quiet days produce no empty commits.
-- Declares `permissions: contents: write`; the repository's **Settings → Actions → General → Workflow permissions** must also be set to **Read and write permissions** for the push to succeed. Commits land on the default branch (`main`).
-
-The updater and the workflow touch only `BUILD_DATABASE` and its `BUILD_DATABASE_LAST_UPDATED` marker; all other code in `sharehorse.js` is untouched. The [manual process](#maintaining-the-build-database) below remains valid as a fallback or for curating labels the updater can't infer.
+**Workflow - `.github/workflows/release.yml`:** runs daily (plus manual), commits only when `sharehorse.js` changed, then tags and publishes a GitHub Release with a versioned zip. Needs **Settings → Actions → General → Workflow permissions → Read and write**.
 
 ## Confidence scoring
 
-Confidence is about the **build number**, not the extended fingerprint. Soft/informational signals (CSP presence, WebTemplate) are weighted at 1 and excluded from the "corroborated by 2+ signals" threshold, so they add context without inflating certainty about the version.
+Confidence is about the **build**, not the extended fingerprint. Soft signals (CSP, WebTemplate) are weight-1 and excluded from the "2+ signals" threshold.
 
 | Level | Meaning |
 |---|---|
-| **High** | SharePoint Online (hostname-based), or an on-prem build with an exact, unambiguous database match. |
-| **Medium-High** | Product identified with high confidence, but the specific CU/PU build isn't in the database (closest-match fallback used). |
-| **Medium** | Product identified via the numeric build-range heuristic (no exact database match), corroborated by 2+ *build-bearing* signals. |
-| **Low (ambiguous build)** | The 2019/SE shared-RTM collision, or another multi-product exact match. |
-| **Low** | No reliable version signal could be retrieved at all. |
+| **High** | SharePoint Online (hostname), or an exact, unambiguous database match. |
+| **Medium-High** | Product identified, but the build isn't in the database (closest-match fallback). |
+| **Medium** | Build-range heuristic, corroborated by 2+ build-bearing signals. |
+| **Low (ambiguous)** | The 2019/SE shared-RTM collision, or another multi-product exact match. |
+| **Low** | No reliable version signal. |
 
 ## Output
 
-Every single-page run produces:
-
-- **Console banner** with hostname and timestamp.
-- **Raw Signals Collected** - every header/endpoint value read, plus the resolved REST API base URL, in a collapsible group.
-- **Detection Evidence** - which signals fired, their weight, and their full resolved URL.
-- **Diagnostics** - timeouts, auth redirects, 401/403s (only shown if something notable occurred).
-- **Header Quirk Detected** - only shown when the `16.0.0.XXXXX` bug is triggered.
-- **🧬 Extended Fingerprint** - Cloud Instance, Negotiated Protocol, Site/Web details (with the compatibility-mode warning inline if triggered), Site Collection topology, Regional Settings, installed language packs, REST contextinfo extras, CSP header, and proxy/WAF/CDN headers.
-- **Build Database Match** - exact match, closest-match fallback, or ambiguity report.
-- **Summary card** - Product, Build, CU/PU, KB Number, Released, Environment, Confidence, rendered as an aligned ASCII box (deliberately not Unicode box-drawing characters or variable font sizes, both of which break column alignment across console fonts/themes).
-- **Downloadable `.txt` report** - everything above, saved via `Blob` + a synthetic anchor click.
-- **Downloadable `.json` report** - structured, machine-readable, with a dedicated `extendedFingerprint` object alongside the existing `rawSignals`, intended for an inventory/audit pipeline.
-
-Batch mode additionally produces a compact comparison table in the console and a combined `.csv` download with five extended columns. See [Batch mode](#batch-mode) and [Console helpers](#console-helpers).
+- **Console banner**, **Raw Signals Collected**, **Detection Evidence**, **🩺 Diagnostics** (if any), **Header Quirk Detected** (if triggered), **🧬 Extended Fingerprint**, **Build Database Match**, and a **Summary card** (aligned ASCII box).
+- **`.txt`** (everything above) and **`.json`** (with a dedicated `extendedFingerprint` object alongside `rawSignals`), saved via `Blob`.
+- Batch mode adds a console comparison table and a combined `.csv`.
 
 ## Network cost of the extended signals
 
-Over core build detection, the extended fingerprint adds **three GET requests** per target URL:
+Over core detection, the extended fingerprint adds **three GET requests** per target:
 
-1. `_api/web?$select=...` (WebTemplate, UIVersion, Configuration, Language)
+1. `_api/web?$select=...`
 2. `_api/web/regionalsettings?$select=...&$expand=InstalledLanguages,TimeZone`
 3. `_api/site?$select=Id,HubSiteId,GroupId,ReadOnly`
 
-All three are read-only, unauthenticated-by-default (same permission level as the core detection endpoints), and independently graceful-degrading - if one is blocked or 403s, the rest of the run is unaffected. The CSP-header, proxy-header, cloud-instance, and negotiated-protocol signals add **zero** extra requests, since they're read off responses already being fetched.
+All read-only, unauthenticated-by-default, and independently graceful-degrading. The CSP, proxy, cloud, and protocol signals add **zero** requests (read off existing responses).
 
 ## Scope & limitations
 
-- **Read-only.** Only issues `GET`/`HEAD`/`POST` requests to standard SharePoint metadata endpoints. No write operations, exploitation, CVE correlation, or vulnerability scanning.
-- **No new authentication.** Runs in the current browser session's existing auth context; it does not attempt to log in or elevate privileges.
-- **Same-origin only.** Subject to browser CORS/session restrictions; it can only see what the logged-in user's session can see, on the origin you're already on.
-- **8-second request timeout.** A farm that's extremely slow (but not down) may show a spurious timeout diagnostic; re-run if you suspect this.
-- **Build database currency.** Reflects Microsoft's release history as of the last update (automated daily, or see the file header for the last manual verification date). Very recent CUs not yet catalogued fall back to closest-match.
-- **Pre-2013 products** (2010, 2007) are out of scope.
-- **Batch mode site resolution.** Reliable for site collection root URLs; a deep page URL passed to batch mode may resolve to a subfolder rather than the true site root (see [Batch mode](#batch-mode)).
-- Some fields (older monthly CUs) only have `YYYY-MM` precision rather than an exact day, because that's the precision Microsoft's table provides for those entries.
-- SharePoint **Foundation** vs. **Server** SKUs (2010/2013 era) aren't distinguished - they share identical build numbering, and there's no reliable browser-only signal to tell them apart.
-- **Compatibility-mode detection requires both signals.** If `/_api/web` is blocked (403) or the farm build couldn't be determined, no compatibility-mode comparison is possible - skipped rather than guessed.
-- **Cloud instance detection is hostname-only** and cannot distinguish GCC (moderate) from commercial - see [signal #2](#2-sovereign--national-cloud-instance).
-- **Negotiated protocol detection depends on browser support** for the Resource Timing API and may be restricted for cross-origin requests in some browsers (notably Safari); returns nothing rather than a guess when unavailable.
-- **WOPI/Office Online Server detection is not implemented** - see [What's intentionally not implemented](#whats-intentionally-not-implemented).
+- **Read-only** (`GET`/`HEAD`/`POST` to standard metadata endpoints) - no writes, exploitation, CVE correlation, or vuln scanning.
+- **No new auth** and **same-origin only** - sees only what the current session can, on the current origin.
+- **8-second timeout** - a very slow farm may show a spurious timeout; re-run.
+- **Database currency** - as of the last update (`BUILD_DATABASE_LAST_UPDATED`); very recent CUs fall back to closest-match.
+- **Out of scope:** pre-2013 products; Foundation vs. Server (identical build numbering).
+- **Compatibility-mode check** needs both the build and `/_api/web`; skipped if either is missing.
+- **Cloud detection is hostname-only** (can't split GCC from commercial); **negotiated protocol** needs Resource Timing API support (restricted cross-origin on some browsers).
+- **WOPI/OOS** not implemented.
 
 ## Samples
 
-Example output from a representative run (on-premises SharePoint Server Subscription Edition, build `16.0.19725.20434` / July 2026 CU). See [SAMPLES.md](./reports/SAMPLES.md) for the full walkthrough.
+Representative run (on-prem Subscription Edition, build `16.0.19725.20434` / July 2026 CU). Full walkthrough: [SAMPLES.md](./reports/SAMPLES.md).
 
-1. **Console output** - banner, collapsible signal groups, the 🧬 Extended Fingerprint group, the header-quirk note, the build-database match, and the summary card: [`reports/sharehorse-console.png`](./reports/sharehorse-console.png).
-2. **`.txt` report** - human-readable, saved to your downloads folder (or `copy(__spDetectorReport())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.txt`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.txt).
-3. **`.json` report** - machine-readable, with a dedicated `extendedFingerprint` object for inventory/audit pipelines (or `copy(__spDetectorReportJSON())`): [`reports/sharepoint-detection_sharepoint.local_2026-09-30.json`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.json).
+- **Console** - [`reports/sharehorse-console.png`](./reports/sharehorse-console.png)
+- **`.txt`** - [`reports/sharepoint-detection_sharepoint.local_2026-09-30.txt`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.txt)
+- **`.json`** - [`reports/sharepoint-detection_sharepoint.local_2026-09-30.json`](./reports/sharepoint-detection_sharepoint.local_2026-09-30.json)
 
 ## Use cases
 
 **Red team (authorized):**
 
-- Identify the exact build and CU/PU, working around the header bug that misreads 2019/SE as 2016.
-- Triage which farms are behind on patches before deeper work.
-- Passive and read-only: fingerprints, never exploits.
+- Pin the exact build/CU, past the header bug that misreads 2019/SE as 2016.
+- Triage which farms are behind on patches.
+- Passive and read-only - fingerprints, never exploits.
 
 **Blue team:**
 
 - Patch-compliance inventory across site collections ([batch mode](#batch-mode)).
-- Spot compatibility-mode drift and version leakage; reduce it with [HARDENING.md](./HARDENING.md).
+- Spot compat-mode drift and version leakage; reduce it with [HARDENING.md](./HARDENING.md).
 - Detect the same fingerprinting against you with [DETECTION.md](./DETECTION.md).
 
 ## Privacy & safety
 
-This tool is designed to be safe to run against a production farm:
-
-- No credentials, tokens, or session data are transmitted anywhere except back to the SharePoint site itself (standard same-origin requests).
-- No data leaves the browser except the locally-saved `.txt`/`.json`/`.csv` reports, written to your own downloads folder via a client-side `Blob` - nothing is sent to any third-party server.
-- No CVE lookups, exploit code, or attack-path logic of any kind.
-- The three additional endpoints used for the extended fingerprint are all standard, unauthenticated-by-default SharePoint REST resources - nothing requires elevated permissions beyond what a normal site visitor already has.
+- Nothing is sent anywhere except back to the SharePoint site (same-origin requests).
+- Reports (`.txt`/`.json`/`.csv`) are written to your own downloads via a client-side `Blob` - no third-party server.
+- No CVE lookups, exploit code, or attack-path logic.
+- The three extended endpoints are standard, unauthenticated-by-default REST resources - no elevated permissions needed.
 
 ## Maintaining the build database
 
-`BUILD_DATABASE` is updated automatically (see [Automated signature updates](#automated-signature-updates)). To update it by hand - as a fallback, or to add a curated label the updater can't infer:
+`BUILD_DATABASE` updates automatically (see [Automated signature updates](#automated-signature-updates)). To update by hand:
 
-1. Check [learn.microsoft.com/officeupdates/sharepoint-updates](https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates) for new entries (Microsoft typically publishes each month's CU/PU on the second Tuesday).
-2. Add new entries to the relevant product's array, in ascending build order, following the existing `{ build, label, date, kb }` shape.
-3. Update the "BUILD_DATABASE last verified" note in the file's header comment.
+1. Check the [release-notes page](https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates) (Microsoft ships each month's CU on the second Tuesday).
+2. Add entries to the product's array, ascending build order, in the `{ build, label, date, kb }` shape.
+3. Update the `BUILD_DATABASE_LAST_UPDATED` constant (and bump `SHAREHORSE_VERSION` if you want a release).
 
 ## Hardening
 
-Two limits bound what hardening can do: the build is returned by `POST /_api/contextinfo` by design and cannot be hidden from an authenticated user, and there is no official Microsoft way to remove the `MicrosoftSharePointTeamServices` header (rules blank the value, not the header). Hardening reduces unauthenticated exposure and removes generic banners; patching is the actual control.
+Two limits: the build is returned by `/_api/contextinfo` by design (can't be hidden from an authenticated user), and there's no official way to remove the `MicrosoftSharePointTeamServices` header (rules blank the value, not the header). Hardening reduces unauthenticated exposure and strips banners; patching is the real control.
 
-- **Require authentication:** removing anonymous access makes unauthenticated requests to `/_api/*` and `/_vti_pvt/service.cnf` fail.
-- **Remove banner headers (documented):** `X-Powered-By`, `X-AspNet-Version` (`enableVersionHeader="false"`), and `Server` (`DisableServerHeader` / `removeServerHeader`).
-- **`MicrosoftSharePointTeamServices`:** no official removal - blank it via an IIS URL Rewrite outbound rule, or disable Client Integration (extreme; breaks Office integration).
-- **No mitigation** REST metadata, hostname-based cloud inference. Do not disable CSP to hide the 24H1+ hint.
+- **Require authentication** - removes anonymous access to `/_api/*` and `/_vti_pvt/service.cnf`.
+- **Remove banner headers** - `X-Powered-By`, `X-AspNet-Version` (`enableVersionHeader="false"`), `Server` (`DisableServerHeader` / `removeServerHeader`).
+- **`MicrosoftSharePointTeamServices`** - no official removal; blank it via an IIS URL Rewrite outbound rule (or disable Client Integration - extreme, breaks Office integration).
+- **Not mitigable:** REST metadata, hostname-based cloud inference. Don't disable CSP to hide the 24H1 hint.
 
-Full methods, config snippets, and Microsoft references: [HARDENING.md](./HARDENING.md).
+Full methods, config, and references: [HARDENING.md](./HARDENING.md).
 
 ## Detection
 
-Because Sharehorse runs in the browser on the logged-in user's session, it blends in as normal traffic - detect it by the request pattern, not a scanner signature. On-premises, the primary source is the IIS W3C logs on the web front ends, read by any SIEM; nothing requires Azure.
+Sharehorse runs in the user's browser session, so it blends in - detect by request pattern, not a scanner signature. On-prem, the source is IIS W3C logs, read by any SIEM (no Azure needed).
 
-- **Strongest single indicator:** a `GET .../_vti_pvt/service.cnf` from an interactive session (normal page loads never fetch it).
-- **Reliable rule:** one `c-ip` + `cs-username` hitting `service.cnf`, `/_api/contextinfo`, and two or more of `/_api/web`, `/_api/site`, `/_api/web/regionalsettings` against one site within ~15-30 seconds.
-- **Edge blocking:** deny `.../_vti_pvt/service.cnf` at a reverse proxy/WAF (do not blanket-block `/_vti_bin/`).
-- **Not detectable:** client-side report downloads, hostname-based cloud inference, or a single stray request.
+- **Strongest indicator:** `GET .../_vti_pvt/service.cnf` from an interactive session (normal pages never fetch it).
+- **Rule:** one `c-ip` + `cs-username` hitting `service.cnf`, `/_api/contextinfo`, and 2+ of `/_api/web`, `/_api/site`, `/_api/web/regionalsettings` against one site within ~15-30s.
+- **Edge block:** deny `.../_vti_pvt/service.cnf` at a reverse proxy/WAF (don't blanket-block `/_vti_bin/`).
+- **Not detectable:** client-side report downloads, cloud inference, or a single request.
 
-Full correlation logic, KQL (Sentinel) and SPL (Splunk) queries, tuning, and references: [DETECTION.md](./DETECTION.md).
+Full correlation logic, KQL/SPL queries, and tuning: [DETECTION.md](./DETECTION.md).
 
 ## Migration
 
-On-premises SharePoint keeps a patch-critical, internet-facing RCE target on your perimeter. The 2025 "ToolShell" wave (CVE-2025-53770/53771) compromised 400+ organizations, including US federal agencies, and hit on-premises farms only - SharePoint Online was not vulnerable. Across the notable SharePoint RCEs (2019-0604 through ToolShell), the fix usually existed; unpatched, exposed farms were the casualties.
+On-prem SharePoint keeps a patch-critical, internet-facing RCE target on your perimeter. The 2025 "ToolShell" wave (CVE-2025-53770/53771) hit 400+ organizations, including US federal agencies, on-premises only - SharePoint Online was not affected.
 
-Moving to SharePoint Online shifts risk under the shared-responsibility model, but not all of it:
+Moving to SharePoint Online shifts risk, unevenly:
 
-- **Transfers to Microsoft:** application/server patching, infrastructure and network hardening, continuous updates - the "one CU behind" incident class largely disappears.
-- **Stays yours:** identity and access (Entra ID, MFA, conditional access), data governance and oversharing, third-party apps, and tenant misconfiguration.
+- **To Microsoft:** application/server patching, infrastructure hardening, continuous updates - the "one CU behind" class largely disappears.
+- **Still yours:** identity/access (Entra ID, MFA, conditional access), data governance, third-party apps, tenant config.
+- **Content:** libraries/lists/files/metadata/modern pages migrate (SPMT); workflows, InfoPath, classic branding, and managed metadata need rework; full-trust farm solutions, event receivers, and timer jobs must be rebuilt.
 
-Content and customizations move unevenly, too:
-
-- **Transfers (SPMT):** libraries, lists, files, metadata, modern pages, version history.
-- **Needs rework:** 2010/2013 workflows (to Power Automate), InfoPath forms (to Power Apps/Forms), classic branding, managed metadata, BCS.
-- **Does not transfer:** full-trust farm solutions (WSP), event receivers, timer jobs, and web.config/IIS customizations - these must be rebuilt (SPFx, remote event receivers, Azure Functions).
-
-Full CVE/exploitation records, metrics, and the complete transfer breakdown: [MIGRATE.md](./MIGRATE.md).
+Full CVE records, metrics, and transfer breakdown: [MIGRATE.md](./MIGRATE.md).
 
 ## Disclaimer
 
-This tool is intended for legitimate IT asset inventory, patch-compliance auditing, and authorized security assessments. Use it only against SharePoint sites you own or are explicitly authorized to inspect.
+For legitimate asset inventory, patch-compliance auditing, and authorized assessment. Use it only on sites you own or are explicitly authorized to inspect.
 
-- **Authorization is your responsibility.** Running fingerprinting or reconnaissance against systems you do not own or have written permission to test may violate computer-misuse laws, acceptable-use policies, or contractual terms in your jurisdiction. You are solely responsible for ensuring you have permission before running it.
-- **No warranty.** The tool is provided "as is," without warranty of any kind. Detection results, build-database matches, and confidence levels can be wrong or out of date, and should be verified against an authoritative source (e.g. Central Administration, farm install history) before you act on them.
-- **No liability.** The authors and contributors accept no liability for any damage, disruption, or legal consequence arising from use or misuse of this tool.
-- **Not affiliated with Microsoft.** "SharePoint" and related names are trademarks of Microsoft Corporation. This is an independent tool and is not endorsed by or affiliated with Microsoft.
+- **Authorization is your responsibility** - unauthorized reconnaissance may violate computer-misuse laws or policy.
+- **No warranty** - results can be wrong or out of date; verify against an authoritative source (Central Admin, install history) before acting.
+- **No liability** for any damage or consequence of use or misuse.
+- **Not affiliated with Microsoft;** "SharePoint" is a Microsoft trademark.
 
 ## License
 
