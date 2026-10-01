@@ -1,5 +1,7 @@
 # Why migrate: on-premises SharePoint risk and what moving to the cloud changes
 
+![SharePwn](./assets/migrate-banner.jpg)
+
 On-premises SharePoint puts an internet-facing, customer-patched application server on your perimeter, and that model has been repeatedly exploited. Moving to SharePoint Online shifts most of that risk to Microsoft, but not all of it, and not all content and customizations move cleanly.
 
 ## The continued risk of on-premises SharePoint
