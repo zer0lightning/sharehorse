@@ -131,6 +131,13 @@ async function main() {
     return;
   }
 
+  // Bump the in-script "last updated" marker to today (UTC).
+  const today = new Date().toISOString().slice(0, 10);
+  src = src.replace(
+    /(BUILD_DATABASE_LAST_UPDATED = ")\d{4}-\d{2}-\d{2}(")/,
+    `$1${today}$2`
+  );
+
   const check = require('child_process').spawnSync(process.execPath, ['--check', '-'], { input: src });
   if (check.status !== 0) {
     throw new Error('Refusing to write: result failed `node --check`.\n' + check.stderr.toString());
