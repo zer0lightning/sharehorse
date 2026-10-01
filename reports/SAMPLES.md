@@ -53,7 +53,7 @@ Saved automatically to your downloads folder, and also available via `copy(__spD
 
 ## `.json` report
 
-Machine-readable sibling for inventory/audit pipelines, also available via `copy(__spDetectorReportJSON())`. It carries a dedicated `extendedFingerprint` object alongside the flat `rawSignals`. Top-level fields shown below; full file: [`/sharepoint-detection_sharepoint.local_2026-09-30.json`](./sharepoint-detection_sharepoint.local_2026-09-30.json.
+Machine-readable sibling for inventory/audit pipelines, also available via `copy(__spDetectorReportJSON())`. It carries a dedicated `extendedFingerprint` object alongside the flat `rawSignals`. Top-level fields shown below; full file: [`/sharepoint-detection_sharepoint.local_2026-09-30.json`](./sharepoint-detection_sharepoint.local_2026-09-30.json).
 
 ```json
 {
