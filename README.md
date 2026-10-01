@@ -277,6 +277,7 @@ If a detected build isn't in the table (e.g. a CU released after the last update
 - Parses the four living-product tables (Subscription Edition, 2019, 2016, 2013) into `{ build, kb, date }` rows, taking the first build in the Version cell and the first (STS / language-independent) KB in the KB cell.
 - **Merges, never regenerates.** Only build numbers not already in `BUILD_DATABASE` are appended, to the end of the matching product array, in the existing `{ build, label, date, kb }` shape. Existing hand-curated entries - RTM notes, feature-update milestones, end-of-support labels - are left byte-for-byte untouched.
 - New entries get a derived label of `"<Month> <Year> CU"` and a date of `YYYY-MM-DD` (or `YYYY-MM` when Microsoft's table gives only a month).
+- **Stamps the date.** When (and only when) it adds a build, it bumps the in-script `BUILD_DATABASE_LAST_UPDATED` constant to the run date. `SHAREHORSE_VERSION` is never touched.
 - **Self-protecting:** it runs `node --check` on the result and refuses to write if the file wouldn't parse, and aborts if a product section yields zero rows (a signal the page layout changed) rather than blanking the table. If nothing new is found, the file is byte-identical, so no commit is produced.
 
 **Workflow - `.github/workflows/update-sharepoint-sigs.yml`:**
@@ -285,7 +286,7 @@ If a detected build isn't in the table (e.g. a CU released after the last update
 - Checks out the repo, sets up Node, runs `node scripts/update-signatures.js`, then commits and pushes **only if `sharehorse.js` actually changed** - so quiet days produce no empty commits.
 - Declares `permissions: contents: write`; the repository's **Settings → Actions → General → Workflow permissions** must also be set to **Read and write permissions** for the push to succeed. Commits land on the default branch (`main`).
 
-The updater and the workflow only touch `BUILD_DATABASE`; all other code in `sharehorse.js` is untouched. The [manual process](#maintaining-the-build-database) below remains valid as a fallback or for curating labels the updater can't infer.
+The updater and the workflow touch only `BUILD_DATABASE` and its `BUILD_DATABASE_LAST_UPDATED` marker; all other code in `sharehorse.js` is untouched. The [manual process](#maintaining-the-build-database) below remains valid as a fallback or for curating labels the updater can't infer.
 
 ## Confidence scoring
 
