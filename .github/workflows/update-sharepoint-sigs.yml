@@ -2,13 +2,11 @@ name: Update SharePoint signatures
 
 on:
   schedule:
-    # Every day at 06:12 UTC. (Minute jittered off :00 so the job isn't queued
-    # behind the top-of-hour crowd of GitHub-hosted runners.)
     - cron: "12 6 * * *"
-  workflow_dispatch: {}  # manual "Run workflow" button in the Actions tab
+  workflow_dispatch: {}
 
 permissions:
-  contents: write  # needed to push the updated file back
+  contents: write
 
 concurrency:
   group: update-sharepoint-sigs
@@ -34,12 +32,10 @@ jobs:
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           if git diff --quiet -- sharehorse.js; then
             echo "No signature changes today."
             exit 0
           fi
-
           git add sharehorse.js
           git commit -m "chore: update SharePoint signatures ($(date -u +%Y-%m-%d))"
           git push
