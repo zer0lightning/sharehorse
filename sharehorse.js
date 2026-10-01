@@ -1,111 +1,14 @@
 /**
- * ============================================================================
- * Sharehorse — SharePoint Fingerprint Tool (Advanced) by zer0lightning
- * ============================================================================
+ * Sharehorse - SharePoint Fingerprint Tool
  * https://github.com/zer0lightning/sharehorse
- * Passive, read-only reconnaissance tool for identifying the SharePoint
- * product edition, build number, and (where determinable) Cumulative/Public
- * Update level of a SharePoint site — plus an extended fingerprint beyond
- * just the build number:
- *   - Sovereign/national cloud instance, from hostname alone (commercial /
- *     GCC High / DoD / 21Vianet China / legacy Germany) — free, no request
- *   - Negotiated HTTP protocol (h2/http1.1/h3) via the Resource Timing API
- *     — free, no extra request
- *   - Site collection compatibility mode (UIVersion vs. farm build major)
- *   - WebTemplate, installed MUI language packs, regional LocaleId/TimeZone
- *   - Site collection topology (/_api/site): Site Id, hub-site association,
- *     Microsoft 365 Group connection, read-only flag
- *   - REST contextinfo extras (SupportedSchemaVersions, SiteFullUrl,
- *     WebFullUrl — cross-checked against this script's own site-URL guess)
- *   - Content-Security-Policy header presence (soft signal for SE 24H1+)
- *   - Reverse-proxy / WAF / CDN headers (Via, X-Forwarded-*, CF-RAY,
- *     X-Azure-Ref, Akamai, Fastly)
  *
- * NOT IMPLEMENTED (intentionally): Office Online Server / WOPI discovery
- * would reveal a separately-configured Office Online Server's rough
- * generation, which is a genuinely distinct fact from the SharePoint farm's
- * own version — but the exact discovery endpoint/response shape needs more
- * verification before shipping a confident implementation, rather than
- * guessing at a schema the way the endpoints above could be implemented
- * with confidence. Flagging this as a known gap, not an oversight.
- *
- * Also intentionally excluded (recon-adjacent, not fingerprinting):
- * subsite/feature/solution enumeration, executing search queries, and
- * probing what the current user specifically has permission to do.
- *
- * Read-only GET requests per target (_api/web,
- * _api/web/regionalsettings, _api/site) to pull the signals above.
- *
- * USAGE (single page):
- *   1. Navigate to the target SharePoint site in Chrome.
- *   2. Open DevTools (F12) -> Console tab.
- *   3. Paste this entire script and press Enter.
- *   It automatically detects the current page, prints a full report, and
- *   downloads a .txt and .json report to your Downloads folder.
- *
- * USAGE (batch mode — multiple SITE COLLECTIONS on the SAME origin):
- *   After the script has run once, call:
- *     await __spDetectorBatch([
- *       "https://tenant.sharepoint.com/sites/TeamA",
- *       "https://tenant.sharepoint.com/sites/TeamB",
- *     ])
- *   This only works for URLs on the SAME origin as the page you're on —
- *   cross-origin requests would be blocked by the browser (CORS) and
- *   wouldn't carry the right session cookies anyway. It's intended for
- *   auditing multiple site collections within one farm/tenant, not
- *   multiple unrelated SharePoint deployments.
- *
- * OTHER CONSOLE HELPERS (available after the script runs):
- *   __spDetectorReport()      -> plain-text report string (for copy())
- *   __spDetectorReportJSON()  -> structured JSON report object
- *   __spDetectorSummary()     -> just the compact summary card, as text
- *   __spDetectorLastResult    -> raw detection result object
- *   __spDetectorBatch(urls)   -> run batch mode (see above)
- *
- * SCOPE / LIMITATIONS (by design):
- *   - This script ONLY reads standard HTTP response headers and public,
- *     unauthenticated-by-default SharePoint metadata endpoints
- *     (service.cnf, _api/contextinfo). It performs no vulnerability
- *     scanning, no CVE correlation, no exploitation, and no write/intrusive
- *     actions of any kind.
- *   - Microsoft does not publish a single machine-readable, fully
- *     authoritative build->CU mapping. BUILD_DATABASE below is the full
- *     official update history transcribed from Microsoft's release-notes
- *     page as of the date noted below. Any build not found in the table is
- *     reported as "Unknown" along with the nearest known build for context.
- *   - IMPORTANT KNOWN AMBIGUITY: SharePoint Server 2019 RTM and
- *     SharePoint Server Subscription Edition RTM share the EXACT SAME
- *     build number (16.0.10337.12109). A build-number match alone cannot
- *     disambiguate these two products at that specific build. This script
- *     detects that condition and reports it as an explicit ambiguity
- *     rather than guessing.
- *   - KNOWN HEADER BUG: on SharePoint 2019+/Subscription Edition, the
- *     MicrosoftSharePointTeamServices response header reports a malformed
- *     "16.0.0.XXXXX" string instead of the real build. This script detects
- *     and works around it — see isLikelyBuggyTeamServicesFormat().
- *   - REST API calls are resolved against the actual site collection
- *     (via _spPageContextInfo.webAbsoluteUrl when available), not the
- *     domain root, since root and sub-sites can be provisioned at
- *     different patch levels.
- *   - Batch mode is same-origin only — see USAGE above.
- *
- * MAINTENANCE:
- *   - Update BUILD_DATABASE whenever Microsoft ships a new CU/PU, or
- *     periodically (recommended: monthly) by cross-referencing:
- *       https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates
- *       https://learn.microsoft.com/en-us/sharepoint/product-servicing-policy/
- *     Add new entries in ascending build order within each product's array.
- *   - SharePoint Server 2016 and 2019 reached End of Support on 2026-07-14
- *     per Microsoft's published lifecycle. Only SharePoint Server
- *     Subscription Edition (Modern Lifecycle) remains on active monthly
- *     servicing going forward.
- *   - BUILD_DATABASE last verified: 2026-07-16
- * ============================================================================
+ * Passive, read-only fingerprinting of a SharePoint site: product edition,
+ * build number, and CU/PU, plus an extended fingerprint. Usage, build-database
+ * notes, hardening, detection, and references are in the repo.
  */
 
 (async function () {
 
-  //#region ---------------------------- Console Styling ----------------------------
   const STYLE = {
     banner:   "color:#7dd3fc;font-weight:bold;font-size:14px;letter-spacing:0.5px;",
     subtitle: "color:#64748b;font-size:11px;font-style:italic;",
@@ -125,31 +28,12 @@
     pillBase: "padding:2px 10px;border-radius:10px;font-weight:bold;font-size:11px;",
   };
 
-  // Colored "pill" badge helper — logs a single-line badge like [ HIGH ].
   function pill(text, bg, fg = "#0b1220") {
     console.log(`%c ${text} `, `${STYLE.pillBase}background:${bg};color:${fg};`);
   }
 
   const PILL_COLOR = { high: "#4ade80", medium: "#facc15", low: "#f87171" };
-  //#endregion
 
-  //#region ---------------------------- BUILD DATABASE ----------------------------
-  /**
-   * Each entry: { build: "16.0.x.y", label: "Human readable CU/PU/FP name",
-   *               date: "YYYY-MM-DD" or "YYYY-MM" (day unknown for older
-   *               entries where Microsoft's table only lists month/year),
-   *               kb: "KB number or null" }
-   * Builds are the full four-octet version string as reported by
-   * MicrosoftSharePointTeamServices / vti_buildversion / REST LibraryVersion.
-   *
-   * This is the FULL official update history for SharePoint 2013,
-   * SharePoint 2016, SharePoint 2019, and Subscription Edition, transcribed
-   * directly from Microsoft's authoritative release-notes page (every
-   * monthly CU/PU, not just milestones) as of the date below. SharePoint
-   * 2010/2007 are intentionally out of scope (long EOL, pre-16.x).
-   *
-   * Source (verified 2026-07-16): https://learn.microsoft.com/en-us/officeupdates/sharepoint-updates
-   */
   const BUILD_DATABASE = {
 
     "SharePoint Server 2013": [
@@ -171,11 +55,11 @@
       { build: "15.0.5537.1000", label: "March 2023 CU", date: "2023-03", kb: "5002366" },
       { build: "15.0.5545.1000", label: "April 2023 CU (final / end of support)", date: "2023-04", kb: "5002379" },
       { build: "15.0.4481.1005", label: "March 2013 CU", date: "2013-03", kb: "2768000" },
-      { build: "15.0.4505.100215", label: "April 2013 CU", date: "2013-04", kb: "2751999" },
-      { build: "15.0.4517.100315", label: "June 2013 CU", date: "2013-06", kb: "2817346" },
+      { build: "15.0.4505.1002", label: "April 2013 CU", date: "2013-04", kb: "2751999" },
+      { build: "15.0.4517.1003", label: "June 2013 CU", date: "2013-06", kb: "2817346" },
       { build: "15.0.4535.1000", label: "August 2013 CU", date: "2013-08", kb: "2817517" },
-      { build: "15.0.4551.100115", label: "October 2013 CU", date: "2013-10", kb: "2825674" },
-      { build: "15.0.4551.150815", label: "December 2013 CU", date: "2013-12", kb: "2849961" },
+      { build: "15.0.4551.1001", label: "October 2013 CU", date: "2013-10", kb: "2825674" },
+      { build: "15.0.4551.1508", label: "December 2013 CU", date: "2013-12", kb: "2849961" },
       { build: "15.0.4571.1502", label: "April 2014 CU", date: "2014-04", kb: "2880551" },
       { build: "15.0.4605.1004", label: "May 2014 CU", date: "2014-05", kb: "2863892" },
       { build: "15.0.4623.1001", label: "June 2014 CU", date: "2014-06", kb: "2881063" },
@@ -214,7 +98,7 @@
       { build: "15.0.4945.1000", label: "July 2017 CU", date: "2017-07", kb: "3213563" },
       { build: "15.0.4953.1000", label: "August 2017 CU", date: "2017-08", kb: "4011073" },
       { build: "15.0.4963.1001", label: "September 2017 CU", date: "2017-09", kb: "4011132" },
-      { build: "15.0.4971.100115", label: "October 2017 CU", date: "2017-10", kb: "4011173" },
+      { build: "15.0.4971.1001", label: "October 2017 CU", date: "2017-10", kb: "4011173" },
       { build: "15.0.4981.1002", label: "November 2017 CU", date: "2017-11", kb: "4011248" },
       { build: "15.0.4989.1001", label: "December 2017 CU", date: "2017-12", kb: "4011588" },
       { build: "15.0.4997.1000", label: "January 2018 CU", date: "2018-01", kb: "4011649" },
@@ -229,7 +113,7 @@
       { build: "15.0.5075.1000", label: "October 2018 CU", date: "2018-10", kb: "4461455" },
       { build: "15.0.5085.1000", label: "November 2018 CU", date: "2018-11", kb: "4461508" },
       { build: "15.0.5093.1000", label: "December 2018 CU", date: "2018-12", kb: "4461552" },
-      { build: "15.0.5101.100015", label: "January 2019 CU", date: "2019-01", kb: "4461603" },
+      { build: "15.0.5101.1000", label: "January 2019 CU", date: "2019-01", kb: "4461603" },
       { build: "15.0.5111.1001", label: "February 2019 CU", date: "2019-02", kb: "4462150" },
       { build: "15.0.5119.1001", label: "March 2019 CU", date: "2019-03", kb: "4462217" },
       { build: "15.0.5127.1000", label: "April 2019 CU", date: "2019-04", kb: "4464512" },
@@ -384,7 +268,6 @@
       { build: "16.0.5548.1003", label: "April 2026 CU", date: "2026-04-14", kb: "5002862" },
       { build: "16.0.5552.1002", label: "May 2026 CU", date: "2026-05-12", kb: "5002869" },
       { build: "16.0.5556.1005", label: "June 2026 CU (final / end of support 2026-07-14)", date: "2026-06-09", kb: "5002881" },
-      { build: "16.0.5556.1005", label: "July 2026 CU (final / end of support 2026-07-14)", date: "2026-07-14", kb: "5002891" },
       { build: "16.0.5565.1001", label: "August 2026 CU (Post EOL 2026-07-14)", date: "2026-08-11", kb: "5002905" },
       { build: "16.0.4732.1000", label: "August 2018 CU", date: "2018-08", kb: "4032256" },
       { build: "16.0.5056.1001", label: "September 2020 CU", date: "2020-09", kb: "4484506" },
@@ -488,8 +371,8 @@
       { build: "16.0.10417.20128", label: "May 2026 CU", date: "2026-05-12", kb: "5002872" },
       { build: "16.0.10417.20153", label: "June 2026 CU (final / end of support 2026-07-14)", date: "2026-06-09", kb: "5002876" },
       { build: "16.0.10417.20198", label: "August 2026 CU (Post EOL 2026-07-14)", date: "2026-08-11", kb: "5002894" },
-      { build: "16.0.10340.1210116", label: "January 2019 CU", date: "2019-01", kb: "4461634" },
-      { build: "16.0.10386.2001116", label: "May 2022 CU", date: "2022-05", kb: "5002207" },
+      { build: "16.0.10340.12101", label: "January 2019 CU", date: "2019-01", kb: "4461634" },
+      { build: "16.0.10386.20011", label: "May 2022 CU", date: "2022-05", kb: "5002207" },
       { build: "16.0.10417.20175", label: "July 2026 CU", date: "2026-07-14", kb: "5002883" },
     ],
 
@@ -552,29 +435,13 @@
       { build: "16.0.19725.20280", label: "May 2026 CU", date: "2026-05-12", kb: "5002863" },
       { build: "16.0.19725.20384", label: "June 2026 CU", date: "2026-06-09", kb: "5002873" },
       { build: "16.0.19725.20434", label: "July 2026 CU", date: "2026-07-14", kb: "5002882" },
-      { build: "16.0.19725.20522", label: "August 2026 CU", date: "2026-08-11", kb: "5002893"}, 	 	
+      { build: "16.0.19725.20522", label: "August 2026 CU", date: "2026-08-11", kb: "5002893"},
       { build: "16.0.20326.20136", label: "September 2026 CU", date: "2026-09-08", kb: "5002908" },
     ],
   };
 
-  //#endregion
-
-  //#region ---------------------------- SHARED HELPERS (target-URL agnostic) ----------------------------
   const FETCH_TIMEOUT_MS = 8000;
 
-  // KNOWN MICROSOFT BUG: on SharePoint Server 2019+ and Subscription Edition,
-  // the MicrosoftSharePointTeamServices RESPONSE HEADER (not vti_buildversion,
-  // not the REST API) reports version as "16.0.0.XXXXX" — the real "build"
-  // segment (3rd octet) is zeroed out and the actual build number is shoved
-  // into the 4th (revision) slot instead, with the true revision lost
-  // entirely. Microsoft's product group acknowledged this as a known,
-  // unfixed issue. Concretely: a farm truly running build 16.0.19725.20384
-  // will report "MicrosoftSharePointTeamServices: 16.0.0.19725" in the HTTP
-  // header, while vti_buildversion and the REST API's LibraryVersion report
-  // the correct, full "16.0.19725.20384". Naively trusting the header as the
-  // primary source parses build segment = 0, landing in the SharePoint 2016
-  // heuristic bucket — a serious misclassification for what may actually be
-  // a modern Subscription Edition or 2019 farm.
   function isLikelyBuggyTeamServicesFormat(v) {
     if (!v) return false;
     const p = v.split(".").map(Number);
@@ -591,14 +458,11 @@
     return matches;
   }
 
-  // Simple numeric distance across the 4 version octets, weighted so the
-  // 3rd octet (build number) dominates comparisons — good enough for
-  // "closest known build" approximation, not for exact CU determination.
   function buildDistance(a, b) {
     const pa = a.split(".").map(Number);
     const pb = b.split(".").map(Number);
     if (pa.length < 4 || pb.length < 4 || pa.some(isNaN) || pb.some(isNaN)) return null;
-    if (pa[0] !== pb[0]) return null; // different major = not comparable
+    if (pa[0] !== pb[0]) return null;
     const buildDiff = Math.abs(pa[2] - pb[2]) * 100000;
     const revDiff = Math.abs(pa[3] - pb[3]);
     return buildDiff + revDiff;
@@ -628,15 +492,6 @@
     return { label: "Unknown (not in local database)", date: "Unknown", kb: null, exact: false, closest };
   }
 
-  // ---- Product/edition disambiguation ----
-  // Core challenge: SharePoint 2019 and Subscription Edition share major=16
-  // and, at RTM specifically, an IDENTICAL build number (16.0.10337.12109).
-  // Strategy, in order of preference:
-  //   a) Exact match against BUILD_DATABASE. If the build exists in more
-  //      than one product's table (the RTM collision), report it as an
-  //      explicit ambiguity rather than guessing.
-  //   b) Build-number heuristic fallback (documented, lower confidence).
-  //   c) isOnline short-circuits to "Online".
   function classifyBuild(versionStr, isOnline, BUILD_DATABASE) {
     if (isOnline) {
       return { product: "SharePoint Online", confidence: "High", method: "hostname (*.sharepoint.com)", ambiguous: null };
@@ -651,16 +506,10 @@
       return { product: "Unknown", confidence: "Low", method: "unparseable version string", ambiguous: null };
     }
 
-    // Account for the known "16.0.0.XXXXX" header bug: if this exact string
-    // is the buggy header format, the real build segment is parts[3], not
-    // parts[2]. (This only matters if this function is ever called directly
-    // with a raw header value; the normal detectedBuild pipeline already
-    // avoids this by preferring vti_buildversion/REST first.)
     const buggy = isLikelyBuggyTeamServicesFormat(versionStr);
     const major = parts[0];
     const build = buggy ? parts[3] : parts[2];
 
-    // 2013
     if (major === 15) {
       return { product: "SharePoint Server 2013", confidence: "High", method: "major version = 15", ambiguous: null };
     }
@@ -669,11 +518,10 @@
       return { product: "Unknown", confidence: "Low", method: `unrecognized major version (${major})`, ambiguous: null };
     }
 
-    // major === 16: could be 2016, 2019, or Subscription Edition.
     const exactMatches = findAllExactMatches(versionStr, ["SharePoint Server 2016", "SharePoint Server 2019", "SharePoint Server Subscription Edition"], BUILD_DATABASE);
 
     if (exactMatches.length > 1) {
-      // Genuine ambiguity (e.g. the shared 2019/SE RTM build).
+
       return {
         product: exactMatches.map(m => m.product).join(" or "),
         confidence: "Low (ambiguous)",
@@ -691,14 +539,6 @@
       };
     }
 
-    // Fallback heuristic (documented as lower confidence). Based on observed
-    // real-world ranges: SharePoint 2016 stays below build 6000; SharePoint
-    // 2019's third octet (the "build" segment) has stayed within roughly
-    // 10337–10420 across its lifecycle; Subscription Edition started at the
-    // same 10337 RTM value but its build segment climbs steadily over time
-    // (into the 13000s, 17000s, 19000s+ by 2025-2026) as it receives ongoing
-    // feature updates. This is a fallback ONLY — always prefer an exact
-    // database match above.
     if (build < 6000) {
       return { product: "SharePoint Server 2016", confidence: "Medium", method: "build number heuristic (<6000)", ambiguous: null };
     }
@@ -721,10 +561,6 @@
     return { product: "Unknown", confidence: "Low", method: `build segment (${build}) outside all known heuristic ranges`, ambiguous: null };
   }
 
-  // Fetch with a hard timeout so a hung/slow farm can't stall the whole
-  // script indefinitely. Also treats a login-page redirect as a distinct,
-  // reportable condition rather than a silent "not accessible", and flags
-  // 401/403 as access-denied rather than just "request failed".
   async function fetchWithTimeout(url, opts, diagnostics) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -754,33 +590,6 @@
     }
   }
 
-  // Resolve API endpoints relative to the actual SharePoint SITE, not the
-  // domain root. A naive `new URL("/_api/...", pageHref)` resolves against
-  // the origin root because of the leading slash — on a site under a
-  // managed path (e.g. https://tenant.sharepoint.com/sites/TeamA/...), that
-  // would silently query the ROOT site collection's REST API instead of the
-  // site actually being inspected. Root and sub-sites can genuinely be
-  // provisioned at different times/patch levels (especially in SharePoint
-  // Online multi-geo, or hybrid on-prem farms with per-site upgrade lag).
-  //
-  // SharePoint exposes the true site root via a well-known global,
-  // `_spPageContextInfo.webAbsoluteUrl`, present on virtually every classic
-  // and modern SharePoint page — but that global only describes the page
-  // CURRENTLY LOADED in the browser, so it can only be trusted when
-  // targetUrl is the current page.
-  //
-  // For any other target (batch mode against a sibling site collection),
-  // there is no reliable client-side way to resolve an arbitrary PAGE url
-  // back to its site root without an extra authoritative call — that's
-  // exactly the problem _spPageContextInfo solves server-side. Batch mode
-  // therefore expects SITE COLLECTION root URLs (e.g.
-  // "https://tenant.sharepoint.com/sites/TeamA"), not arbitrary page URLs
-  // (documented in USAGE above). Given that, the fallback here only trims
-  // the last path segment when it clearly looks like a page/file (has a
-  // file extension) or a known SharePoint system folder — otherwise it
-  // trusts the given URL is already the site root and uses it as-is. This
-  // avoids the earlier bug where a bare site URL like ".../sites/TeamB"
-  // got incorrectly trimmed down to ".../sites".
   function getSiteBaseUrl(targetUrl, isCurrentPage) {
     if (isCurrentPage && typeof _spPageContextInfo !== "undefined" && _spPageContextInfo && _spPageContextInfo.webAbsoluteUrl) {
       return { siteBaseUrl: _spPageContextInfo.webAbsoluteUrl.replace(/\/$/, ""), usedPageContextInfo: true };
@@ -794,21 +603,7 @@
     const resolvedPath = looksLikePageOrSystemFolder ? path.replace(/\/[^/]*$/, "") : path;
     return { siteBaseUrl: `${u.origin}${resolvedPath}`, usedPageContextInfo: false };
   }
-  //#endregion
 
-  //#region ---------------------------- FREE FINGERPRINT SIGNALS (no extra requests) ----------------------------
-  // ---- Signal #1: sovereign/national cloud instance, from hostname alone ----
-  // Pure string matching against the target hostname — zero network cost.
-  // Knowing which Microsoft cloud instance a tenant lives in matters a lot
-  // for a compliance conversation (GCC High/DoD have very different rules
-  // than commercial), so this is worth surfacing even though it's not a
-  // SharePoint *version* signal.
-  //
-  // IMPORTANT CAVEAT: GCC (the "moderate" US Government Community Cloud)
-  // uses the SAME *.sharepoint.com domain as commercial tenants and cannot
-  // be distinguished by hostname alone — only GCC High and DoD have their
-  // own domain suffixes. This function says so explicitly rather than
-  // guessing.
   function detectCloudEnvironment(hostname) {
     const h = hostname.toLowerCase();
     if (h.endsWith("-my.sharepoint.us")) return "US Government (GCC High) — OneDrive/personal site";
@@ -819,31 +614,20 @@
     if (h.endsWith(".sharepoint.de")) return "Germany cloud (legacy — Microsoft retired this cloud in 2021; only pre-existing tenants remain)";
     if (h.endsWith("-my.sharepoint.com")) return "Commercial or GCC (indistinguishable by hostname) — OneDrive/personal site";
     if (h.endsWith(".sharepoint.com")) return "Commercial or GCC (indistinguishable by hostname — GCC uses the same domain suffix)";
-    return null; // on-premises / not a *.sharepoint.* hostname
+    return null;
   }
 
-  // ---- Signal #2: negotiated HTTP protocol (h2 / http/1.1 / h3) ----
-  // Read via the browser's Resource Timing API off a request we already
-  // made — no extra network call. Doesn't say anything about the SharePoint
-  // build, but it's a real, free infrastructure fingerprint detail (tells
-  // you something about the CDN/proxy/load-balancer layer in front of the
-  // farm). Best-effort: the Resource Timing API isn't available in every
-  // environment/browser configuration, and some browsers (Safari) restrict
-  // cross-origin timing detail — gracefully returns null rather than
-  // throwing if unavailable.
   function getNegotiatedProtocol(url) {
     try {
       if (typeof performance === "undefined" || !performance.getEntriesByType) return null;
       const entries = performance.getEntriesByType("resource").filter(e => e.name === url);
-      const entry = entries[entries.length - 1]; // most recent matching request
+      const entry = entries[entries.length - 1];
       return (entry && entry.nextHopProtocol) ? entry.nextHopProtocol : null;
     } catch {
       return null;
     }
   }
-  //#endregion
 
-  //#region ---------------------------- CORE DETECTION (per target URL) ----------------------------
   async function runDetection(targetUrl) {
     const target = new URL(targetUrl);
     const isCurrentPage = targetUrl === location.href || target.href === new URL(location.href).href;
@@ -861,9 +645,9 @@
       vti_buildversion: null,
       REST_LibraryVersion: null,
       REST_FormDigestTimeoutSeconds: null,
-      // --- Extended fingerprint fields (Sharehorse additions) ---
+
       ContentSecurityPolicy: null,
-      ProxyHeaders: {},               // Via, X-Forwarded-*, CF-RAY, X-Azure-Ref, etc.
+      ProxyHeaders: {},
       REST_SupportedSchemaVersions: null,
       REST_SiteFullUrl: null,
       REST_WebFullUrl: null,
@@ -874,22 +658,21 @@
       Web_UIVersionConfigurationEnabled: null,
       Web_Language: null,
       Web_LanguageName: null,
-      InstalledLanguages: null,       // array of { displayName, lcid, languageTag }
-      // --- Round 2 Sharehorse additions ---
-      CloudEnvironment: null,         // signal #1: sovereign cloud, from hostname
-      NegotiatedProtocol: null,       // signal #2: h2 / http/1.1 / h3, from Resource Timing API
-      Site_Id: null,                  // signal #4: /_api/site
+      InstalledLanguages: null,
+
+      CloudEnvironment: null,
+      NegotiatedProtocol: null,
+      Site_Id: null,
       Site_HubSiteId: null,
       Site_GroupId: null,
       Site_ReadOnly: null,
-      RegionalSettings_LocaleId: null, // signal #5: /_api/web/regionalsettings
+      RegionalSettings_LocaleId: null,
       RegionalSettings_TimeZone: null,
     };
 
-    const evidence = [];    // signals that fired, for confidence scoring
-    const diagnostics = []; // notable non-fatal issues (timeouts, auth redirects, HTTP errors)
+    const evidence = [];
+    const diagnostics = [];
 
-    // ---- 1. HEAD request for response headers ----
     const headUrl = target.href;
     {
       const head = await fetchWithTimeout(headUrl, { method: "HEAD", credentials: "same-origin" }, diagnostics);
@@ -904,23 +687,8 @@
         results.Server = head.headers.get("Server");
         results.XSharePointHealthScore = head.headers.get("X-SharePointHealthScore");
 
-        // --- Signal: CSP header presence as a soft version hint ---
-        // SharePoint Server Subscription Edition Version 24H1 (March 2024,
-        // build 16.0.17328.20136) introduced the ability for SharePoint to
-        // emit its own Content-Security-Policy header on SharePoint pages
-        // (and to let administrators disable it). Its mere PRESENCE is a
-        // soft corroborating signal the farm is on 24H1+ — but ABSENCE
-        // proves nothing (many farms leave it disabled, or a proxy could
-        // strip it), so this is reported as informational only and never
-        // used to override the build-based classification.
         results.ContentSecurityPolicy = head.headers.get("Content-Security-Policy");
 
-        // --- Signal: reverse-proxy / WAF / CDN headers ---
-        // Doesn't identify the SharePoint build, but explains infrastructure
-        // that may be stripping/rewriting other headers (a common cause of
-        // "no version signal retrieved"), and is a legitimate fingerprint
-        // attribute in its own right. Broadened beyond Cloudflare/Azure to
-        // also cover Akamai and Fastly, and generic cache-control evidence.
         const proxyHeaderNames = [
           "Via", "X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto",
           "CF-RAY", "CF-Cache-Status", "X-Azure-Ref", "X-Azure-FDID", "X-Cache",
@@ -931,10 +699,8 @@
           if (val) results.ProxyHeaders[name] = val;
         }
 
-        // --- Signal: sovereign/national cloud instance (hostname-only, free) ---
         results.CloudEnvironment = detectCloudEnvironment(target.hostname);
 
-        // --- Signal: negotiated HTTP protocol (free, via Resource Timing API) ---
         results.NegotiatedProtocol = getNegotiatedProtocol(headUrl);
 
         if (results.MicrosoftSharePointTeamServices) {
@@ -946,11 +712,6 @@
       }
     }
 
-    // ---- 2. service.cnf ----
-    // NOTE: service.cnf lives at the web-application level on-prem (not
-    // strictly site-collection-specific), so root-relative resolution is
-    // generally acceptable — unlike the REST API below, this is resolved
-    // against the target's origin root rather than its site base URL.
     const serviceCnfUrl = new URL("/_vti_pvt/service.cnf", target.href).href;
     {
       const res = await fetchWithTimeout(serviceCnfUrl, { credentials: "same-origin" }, diagnostics);
@@ -970,7 +731,6 @@
       }
     }
 
-    // ---- 3. REST API contextinfo (site-relative — see getSiteBaseUrl) ----
     const { siteBaseUrl, usedPageContextInfo } = getSiteBaseUrl(target.href, isCurrentPage);
     const contextInfoUrl = `${siteBaseUrl}/_api/contextinfo`;
     {
@@ -990,18 +750,11 @@
             evidence.push({ source: "REST API (_api/contextinfo LibraryVersion)", weight: 2, url: contextInfoUrl });
           }
 
-          // --- Signal #1: fields already present in this same response,
-          // just not previously read. No extra network call. ---
           const schemaVersions = info.SupportedSchemaVersions?.results || info.SupportedSchemaVersions || null;
           results.REST_SupportedSchemaVersions = Array.isArray(schemaVersions) ? schemaVersions.join(", ") : null;
           results.REST_SiteFullUrl = info.SiteFullUrl || null;
           results.REST_WebFullUrl = info.WebFullUrl || null;
 
-          // Cross-check: the server's own authoritative WebFullUrl vs. our
-          // guessed siteBaseUrl. When they disagree (most likely in batch
-          // mode, where we don't have _spPageContextInfo to lean on), the
-          // guessed base may be pointing at a subfolder or the wrong site —
-          // surfaced as a diagnostic rather than silently trusted either way.
           if (results.REST_WebFullUrl) {
             const normalize = (u) => u.replace(/\/$/, "").toLowerCase();
             if (normalize(results.REST_WebFullUrl) !== normalize(siteBaseUrl)) {
@@ -1015,14 +768,6 @@
       }
     }
 
-    // ---- 3b. REST API /_api/web — WebTemplate, compat-mode UIVersion (Signal #3) ----
-    // /_api/web is a cheap, read-only, unauthenticated-by-default GET that
-    // exposes the site's own template and, crucially, its UIVersion — the
-    // SITE COLLECTION'S compatibility-mode level. This is a genuinely
-    // distinct fact from the FARM's build number: a site collection can be
-    // left in SharePoint 2013 compatibility mode (UIVersion 15) on top of
-    // much newer farm binaries (2016/2019/SE, major 16), which our
-    // farm-build detection alone has no way to see.
     const webInfoUrl = `${siteBaseUrl}/_api/web?$select=Title,WebTemplate,Configuration,UIVersion,UIVersionConfigurationEnabled,Language,LanguageName`;
     {
       const res = await fetchWithTimeout(webInfoUrl, {
@@ -1048,13 +793,6 @@
       }
     }
 
-    // ---- 3c. REST API regionalsettings — locale, time zone, installed languages ----
-    // One combined request instead of a dedicated installedlanguages-only
-    // call: $expand pulls TimeZone and InstalledLanguages in the same trip,
-    // and LocaleId comes along for free. Operational detail, not
-    // version-specific, but legitimate fingerprint attributes — and it's a
-    // graceful-degrade call: many locked-down farms will 403 this without
-    // affecting anything else.
     const regionalSettingsUrl = `${siteBaseUrl}/_api/web/regionalsettings?$select=LocaleId,TimeZone/Description&$expand=InstalledLanguages,TimeZone`;
     {
       const res = await fetchWithTimeout(regionalSettingsUrl, {
@@ -1080,12 +818,6 @@
       }
     }
 
-    // ---- 3d. REST API /_api/site — site collection scope (Signal: topology) ----
-    // One level above Web: exposes the Site Collection's stable Id (useful
-    // as a correlator across re-runs or renamed URLs), whether it's
-    // associated with a hub site, whether it's Microsoft 365
-    // Group-connected, and whether it's flagged read-only. Real topology
-    // facts, not version info, but a legitimate part of a full fingerprint.
     const siteInfoUrl = `${siteBaseUrl}/_api/site?$select=Id,HubSiteId,GroupId,ReadOnly`;
     {
       const res = await fetchWithTimeout(siteInfoUrl, {
@@ -1106,29 +838,11 @@
       }
     }
 
-    // ---- 4. Environment classification (hostname-only pass) ----
-    // NOTE: this only determines Online vs. self-hosted at this stage. Once
-    // the product is classified below, results.Environment is refined into
-    // three categories rather than a flat "Online / On-Premises" binary —
-    // because lumping Subscription Edition in with 2013/2016/2019 hides a
-    // real, meaningful distinction:
-    //   - SharePoint Online: Microsoft-hosted, continuously updated, no
-    //     customer-managed build/patch cycle.
-    //   - SharePoint Server Subscription Edition: self-hosted, but on
-    //     Microsoft's Modern Lifecycle — no fixed EOL date, monthly PUs.
-    //   - SharePoint Server (2013/2016/2019): self-hosted, Fixed Lifecycle
-    //     — a hard 10-year support clock with a real EOL date.
     const isOnline = target.hostname.endsWith("sharepoint.com");
     results.Environment = isOnline ? "SharePoint Online" : "SharePoint Server (self-hosted) — refining…";
 
-    // ---- 5. Determine best available build string ----
     const headerLooksBuggy = isLikelyBuggyTeamServicesFormat(results.MicrosoftSharePointTeamServices);
 
-    // Primary build string used for exact database lookups and display —
-    // prefer full, correctly-formatted 4-octet values. vti_extenderversion
-    // shares the same major.minor.build.revision shape and matches
-    // vti_buildversion in practice, so it's included as one more fallback
-    // rung before resorting to the (potentially buggy) header.
     const detectedBuild =
       results.vti_buildversion ||
       results.REST_LibraryVersion ||
@@ -1137,9 +851,6 @@
       results.MicrosoftSharePointTeamServices ||
       null;
 
-    // Cross-validation: if we have both a reliable full build AND a header
-    // value, confirm they agree on the build segment (accounting for the
-    // bug), and flag it if they don't.
     let headerCrossCheckNote = null;
     if (headerLooksBuggy && (results.vti_buildversion || results.REST_LibraryVersion || results.vti_extenderversion)) {
       const reliableSource = results.vti_buildversion || results.REST_LibraryVersion || results.vti_extenderversion;
@@ -1152,11 +863,9 @@
       }
     }
 
-    // ---- 6. Product/edition classification ----
     const classification = classifyBuild(detectedBuild, isOnline, BUILD_DATABASE);
     const primaryProduct = classification.ambiguous ? classification.ambiguous[0].product : classification.product;
 
-    // ---- 6b. Refine Environment now that the product is known ----
     if (!isOnline) {
       if (primaryProduct === "SharePoint Server Subscription Edition") {
         results.Environment = "Self-Hosted — Subscription Edition (Modern Lifecycle, no fixed EOL)";
@@ -1173,16 +882,6 @@
       ? lookupCU(primaryProduct, detectedBuild, BUILD_DATABASE)
       : { label: "N/A", date: "N/A", kb: null, exact: false, closest: null };
 
-    // ---- Compatibility-mode detection (Signal #3 continued) ----
-    // A site collection's UIVersion (from /_api/web) is a genuinely
-    // different fact than the farm's build number: a site can be left
-    // running in an OLDER compatibility mode (UIVersion 15 = SharePoint
-    // 2013 rendering/behavior) on top of much newer farm binaries. This is
-    // common after an upgrade where "Get-SPSite | Set-SPSite
-    // -CompatibilityLevel" was never run for that specific site collection.
-    // detectedBuild's major octet (15 or 16) tells us the FARM's era;
-    // UIVersion tells us the SITE's era — a mismatch is a real, actionable
-    // finding, not a contradiction in the script's own logic.
     let compatibilityModeNote = null;
     if (results.Web_UIVersion != null && detectedBuild) {
       const farmMajor = parseInt(detectedBuild.split(".")[0], 10);
@@ -1192,12 +891,6 @@
       }
     }
 
-    // ---- 7. Overall confidence score ----
-    // NOTE: only signals with weight >= 2 (i.e. ones that actually carry a
-    // build/version number — service.cnf, REST LibraryVersion, the header)
-    // count toward "corroborated by 2+ signals". Soft/informational signals
-    // like the CSP-presence hint (weight 1) are real evidence of *something*
-    // but shouldn't be able to inflate confidence in the build number itself.
     const buildBearingEvidenceCount = evidence.filter(e => e.weight >= 2).length;
     function computeConfidence() {
       if (isOnline) return "High";
@@ -1235,9 +928,7 @@
       compatibilityModeNote,
     };
   }
-  //#endregion
 
-  //#region ---------------------------- CONSOLE RENDERING ----------------------------
   function renderConsoleReport(d) {
     const {
       results, evidence, diagnostics, isOnline, headerLooksBuggy, headerCrossCheckNote,
@@ -1245,7 +936,6 @@
       siteBaseUrl, usedPageContextInfo, hostname, generatedAt, compatibilityModeNote,
     } = d;
 
-    // ---- Banner ----
     console.clear();
     const BANNER_FONT = "font-family:'Courier New',Consolas,Menlo,monospace;white-space:pre;font-size:13px;";
     const bw = 60;
@@ -1257,7 +947,6 @@
     );
     console.log(`%cScanned ${hostname}  |  ${generatedAt}`, STYLE.subtitle);
 
-    // ---- Raw signals ----
     console.groupCollapsed("%c🔎 Raw Signals Collected", STYLE.section);
     console.table({
       "Hostname": results.Hostname,
@@ -1277,7 +966,6 @@
     });
     console.groupEnd();
 
-    // ---- Evidence ----
     console.groupCollapsed("%c🧪 Detection Evidence", STYLE.section);
     if (evidence.length) {
       console.table(evidence.map(e => ({ Source: e.source, Weight: e.weight, URL: e.url || "(n/a)" })));
@@ -1286,14 +974,12 @@
     }
     console.groupEnd();
 
-    // ---- Diagnostics (timeouts, auth redirects, 401/403s) ----
     if (diagnostics.length) {
       console.groupCollapsed("%c🩺 Diagnostics", STYLE.section);
       diagnostics.forEach(diag => console.log(`%c⚠ ${diag.url}\n  ${diag.issue}`, STYLE.warn));
       console.groupEnd();
     }
 
-    // ---- Extended fingerprint (Sharehorse-only signals) ----
     console.groupCollapsed("%c🧬 Extended Fingerprint", STYLE.section);
 
     console.log("%cCloud Instance:", STYLE.label, results.CloudEnvironment || "(on-premises / not a *.sharepoint.* hostname)");
@@ -1357,7 +1043,6 @@
 
     console.groupEnd();
 
-    // ---- Header quirk (only shown if relevant) ----
     if (headerLooksBuggy) {
       console.groupCollapsed("%c⚠️  Header Quirk Detected", STYLE.section);
       console.log(
@@ -1371,7 +1056,6 @@
       console.groupEnd();
     }
 
-    // ---- Build database match ----
     console.group("%c📚 Build Database Match", STYLE.section);
     if (classification.ambiguous) {
       console.log(`%c⚠ Ambiguous — build %c${detectedBuild}%c matches multiple products exactly:`, STYLE.warn, STYLE.monoAcc, STYLE.warn);
@@ -1395,13 +1079,10 @@
     }
     console.groupEnd();
 
-    // ---- Summary card ----
     const confKey =
       overallConfidence === "High" ? "high" :
       overallConfidence.startsWith("Medium") ? "medium" : "low";
-    // Card rows must all render at the SAME font-size or the monospace
-    // character width shifts between rows, breaking column alignment even
-    // though the padded string lengths are identical.
+
     const CARD_CONF_COLOR = {
       high:   "color:#4ade80;font-weight:bold;",
       medium: "color:#facc15;font-weight:bold;",
@@ -1410,11 +1091,6 @@
     const confColor = CARD_CONF_COLOR[confKey];
     const pillColor = PILL_COLOR[confKey];
 
-    // Unicode box-drawing characters (┌─┐│└┘) do not render at a guaranteed
-    // fixed width across all DevTools fonts/themes, which breaks alignment
-    // even though the underlying string length is correct. Plain ASCII (+,
-    // -, |) plus an explicit font-family + font-size guarantees consistent
-    // column alignment everywhere, regardless of console theme.
     const CARD_FONT = "font-family:'Courier New',Consolas,Menlo,monospace;white-space:pre;font-size:12px;";
     const W = 62;
     const hr = () => "+" + "-".repeat(W + 2) + "+";
@@ -1457,9 +1133,7 @@
       console.log(`%c⚠ ${compatibilityModeNote}`, STYLE.warn);
     }
   }
-  //#endregion
 
-  //#region ---------------------------- REPORT BUILDERS ----------------------------
   function buildReportText(d) {
     const {
       results, evidence, diagnostics, headerLooksBuggy, headerCrossCheckNote, detectedBuild,
@@ -1589,8 +1263,7 @@
   }
 
   function buildReportJSON(d) {
-    // Structured, machine-readable sibling to the .txt report — intended
-    // for feeding into an inventory/audit pipeline rather than human reading.
+
     return JSON.stringify({
       generatedAt: d.generatedAt,
       targetUrl: d.targetUrl,
@@ -1645,8 +1318,6 @@
     }, null, 2);
   }
 
-  // Compact, copy/paste-friendly text — just the summary card, no evidence
-  // dump. Useful for pasting into a Slack message or ticket.
   function buildSummaryOnlyText(d) {
     const L = [];
     L.push(`SharePoint Detection — ${d.hostname}`);
@@ -1731,16 +1402,12 @@
       return null;
     }
   }
-  //#endregion
 
-  //#region ---------------------------- ORCHESTRATION ----------------------------
   async function runSingle() {
     const d = await runDetection(location.href);
     renderConsoleReport(d);
     downloadTextReport(d);
-    // Small delay before the second download — Chrome's "multiple automatic
-    // downloads" heuristic can trigger a permission prompt for rapid
-    // back-to-back downloads; spacing them out helps avoid it.
+
     await new Promise(r => setTimeout(r, 400));
     downloadJsonReport(d);
 
@@ -1754,12 +1421,6 @@
     return d;
   }
 
-  // Batch mode: run detection across multiple site collections on the SAME
-  // origin as the current page. Cross-origin targets are rejected outright
-  // — the browser's CORS policy would block them anyway, and they wouldn't
-  // carry the right session cookies even if it didn't. This is for auditing
-  // multiple sites within one farm/tenant, not multiple unrelated
-  // deployments.
   async function runBatch(urls, opts = {}) {
     if (!Array.isArray(urls) || urls.length === 0) {
       console.warn("__spDetectorBatch expects a non-empty array of URLs.");
@@ -1792,7 +1453,7 @@
       console.log(`%c  → ${u}`, STYLE.dim);
       const d = await runDetection(u);
       out.push(d);
-      // Small delay between requests so we're not hammering the farm.
+
       await new Promise(r => setTimeout(r, opts.delayMs ?? 300));
     }
 
@@ -1816,6 +1477,5 @@
   window.__spDetectorBatch = runBatch;
 
   await runSingle();
-  //#endregion
 
 })();
