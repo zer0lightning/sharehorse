@@ -147,12 +147,6 @@
       { build: "15.0.5371.1000", label: "August 2021 CU", date: "2021-08", kb: "5002010" },
       { build: "15.0.5381.1000", label: "September 2021 CU", date: "2021-09", kb: "5002021" },
       { build: "15.0.5389.1000", label: "October 2021 CU", date: "2021-10", kb: "5002037" },
-      { build: "15.0.4505.100215", label: "April 2013 CU", date: "2013-04", kb: "2751999" },
-      { build: "15.0.4517.100315", label: "June 2013 CU", date: "2013-06", kb: "2817346" },
-      { build: "15.0.4551.100115", label: "October 2013 CU", date: "2013-10", kb: "2825674" },
-      { build: "15.0.4551.150815", label: "December 2013 CU", date: "2013-12", kb: "2849961" },
-      { build: "15.0.4971.100115", label: "October 2017 CU", date: "2017-10", kb: "4011173" },
-      { build: "15.0.5101.100015", label: "January 2019 CU", date: "2019-01", kb: "4461603" },
     ],
 
     "SharePoint Server 2016": [
@@ -380,8 +374,6 @@
       { build: "16.0.10340.12101", label: "January 2019 CU", date: "2019-01", kb: "4461634" },
       { build: "16.0.10386.20011", label: "May 2022 CU", date: "2022-05", kb: "5002207" },
       { build: "16.0.10417.20175", label: "July 2026 CU", date: "2026-07-14", kb: "5002883" },
-      { build: "16.0.10340.1210116", label: "January 2019 CU", date: "2019-01", kb: "4461634" },
-      { build: "16.0.10386.2001116", label: "May 2022 CU", date: "2022-05", kb: "5002207" },
     ],
 
     "SharePoint Server Subscription Edition": [
@@ -444,9 +436,11 @@
       { build: "16.0.19725.20384", label: "June 2026 CU", date: "2026-06-09", kb: "5002873" },
       { build: "16.0.19725.20434", label: "July 2026 CU", date: "2026-07-14", kb: "5002882" },
       { build: "16.0.19725.20522", label: "August 2026 CU", date: "2026-08-11", kb: "5002893"},
-      { build: "16.0.20326.20136", label: "September 2026 CU", date: "2026-09-08", kb: "5002908" },
     ],
   };
+
+  const SHAREHORSE_VERSION = "1.0.0";
+  const BUILD_DATABASE_LAST_UPDATED = "2026-09-30";
 
   const FETCH_TIMEOUT_MS = 8000;
 
