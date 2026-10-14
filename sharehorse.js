@@ -447,11 +447,12 @@
       { build: "16.0.19725.20434", label: "July 2026 CU", date: "2026-07-14", kb: "5002882" },
       { build: "16.0.19725.20522", label: "August 2026 CU", date: "2026-08-11", kb: "5002893"},
       { build: "16.0.20326.20136", label: "September 2026 CU", date: "2026-09-08", kb: "5002908" },
+      { build: "16.0.20326.20190", label: "October 2026 CU", date: "2026-10-13", kb: "5002927" },
     ],
   };
 
   const SHAREHORSE_VERSION = "1.0.0";
-  const BUILD_DATABASE_LAST_UPDATED = "2026-10-01";
+  const BUILD_DATABASE_LAST_UPDATED = "2026-10-14";
 
   const FETCH_TIMEOUT_MS = 8000;
 
